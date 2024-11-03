@@ -41,7 +41,7 @@ def alpha_beta(nbells, strikes, alpha=0.4, beta=0.1):
         rk = strike["time"] - tk
 
         tk += alpha * rk
-        dk += beta * rk / (dk * gap)
+        dk += beta * rk
 
         tk_1 = tk
         dk_1 = dk
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     # Dump the first four rows
     strikes = strikes[4 * nbells :]
 
-    alpha_beta(nbells, strikes, 0.1, 0.001)
+    alpha_beta(nbells, strikes, 0.4, 0.1)
 
     rows = list(zip(*[iter(strikes)] * nbells))
     sorted_rows = [sorted(row, key=lambda x: x["bell"]) for row in rows]
@@ -77,13 +77,13 @@ if __name__ == "__main__":
             sorted_row[b]["time"] - row[0]["est"]
             for row, sorted_row in zip(rows, sorted_rows)
         ]
-        plt.plot(actual, "o-")
+        plt.plot(actual, "o")
 
     for b in range(0, nbells):
         est = [
             sorted_row[b]["est"] - row[0]["est"]
             for row, sorted_row in zip(rows, sorted_rows)
         ]
-        plt.plot(est, "x")
+        plt.plot(est, "x-")
 
     plt.show()
