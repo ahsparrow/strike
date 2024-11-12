@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 import toga
+import toga_chart
 from toga.style.pack import Pack
 from toga.validators import LengthBetween, Number
 
@@ -16,7 +17,7 @@ class Strike(toga.App):
         self.load_prefs()
 
         score = toga.Box()
-        line = toga.Box()
+        line = self.line_box()
         rms = toga.Box()
         faults = toga.Box()
 
@@ -61,6 +62,20 @@ class Strike(toga.App):
         self.alpha = prefs.get("alpha", "0.4")
         self.beta = prefs.get("beta", "0.1")
         self.include_rounds = prefs.get("rounds", False)
+
+    def line_box(self):
+        self.line_chart = toga_chart.Chart(
+            style=Pack(flex=1), on_draw=self.draw_line_chart
+        )
+        box = toga.Box(children=[self.line_chart])
+
+        return box
+
+    def draw_line_chart(self, chart, figure, *args, **kwargs):
+        ax = figure.add_subplot(1, 1, 1)
+        ax.plot([1, 4, 9, 16])
+
+        figure.tight_layout()
 
     def prefs_box(self):
         def init_prefs():
