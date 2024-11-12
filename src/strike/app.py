@@ -2,12 +2,19 @@
 Bell striking statistics
 """
 
+import json
+import os
+from pathlib import Path
+
 import toga
 from toga.style.pack import Pack
+from toga.validators import LengthBetween, Number
 
 
 class Strike(toga.App):
     def startup(self):
+        self.load_prefs()
+
         score = toga.Box()
         line = toga.Box()
         rms = toga.Box()
@@ -43,11 +50,46 @@ class Strike(toga.App):
     def action_prefs(self, widget):
         self.main_window.content = self.prefs_content
 
-    def prefs_box(self):
-        def save(widget):
-            self.main_window.content = self.container
+    def load_prefs(self):
+        try:
+            with open(Path(self.paths.config, "config.json"), "rt") as fp:
+                prefs = json.load(fp)
+        except FileNotFoundError:
+            prefs = {}
 
-        def cancel(widget):
+        self.server = prefs.get("server", "192.168.4.1")
+        self.alpha = prefs.get("alpha", "0.4")
+        self.beta = prefs.get("beta", "0.1")
+        self.include_rounds = prefs.get("rounds", False)
+
+    def prefs_box(self):
+        def init_prefs():
+            server_input.value = self.server
+            alpha_input.value = self.alpha
+            beta_input.value = self.beta
+            rounds_switch.value = self.include_rounds
+
+        def on_save(widget):
+            if server_input.is_valid and alpha_input.is_valid and beta_input.is_valid:
+                self.server = server_input.value
+                self.alpha = alpha_input.value
+                self.beta = beta_input.value
+                self.include_rounds = rounds_switch.value
+
+                prefs = {
+                    "server": self.server,
+                    "alpha": self.alpha,
+                    "beta": self.beta,
+                    "rounds": self.include_rounds,
+                }
+                os.makedirs(self.paths.config, exist_ok=True)
+                with open(Path(self.paths.config, "config.json"), "wt") as fp:
+                    json.dump(prefs, fp)
+
+                self.main_window.content = self.container
+
+        def on_cancel(widget):
+            init_prefs()
             self.main_window.content = self.container
 
         # CANBell server
@@ -55,7 +97,9 @@ class Strike(toga.App):
             "CANBell Server",
             style=Pack(width=200, text_align="right", padding_right=10),
         )
-        server_input = toga.TextInput(style=Pack(width=150))
+        server_input = toga.TextInput(
+            style=Pack(width=150), validators=[LengthBetween(3, 15, allow_empty=False)]
+        )
         server_box = toga.Box(
             style=Pack(direction="row", padding=10, alignment="center")
         )
@@ -65,7 +109,9 @@ class Strike(toga.App):
         label = toga.Label(
             "Alpha", style=Pack(width=200, text_align="right", padding_right=10)
         )
-        alpha_input = toga.TextInput(style=Pack(width=150))
+        alpha_input = toga.TextInput(
+            style=Pack(width=150), validators=[Number(allow_empty=False)]
+        )
         alpha_box = toga.Box(
             style=Pack(direction="row", padding=10, alignment="center")
         )
@@ -75,7 +121,9 @@ class Strike(toga.App):
         label = toga.Label(
             "Beta", style=Pack(width=200, text_align="right", padding_right=10)
         )
-        beta_input = toga.TextInput(style=Pack(width=150))
+        beta_input = toga.TextInput(
+            style=Pack(width=150), validators=[Number(allow_empty=False)]
+        )
         beta_box = toga.Box(style=Pack(direction="row", padding=10, alignment="center"))
         beta_box.add(label, beta_input)
 
@@ -91,8 +139,8 @@ class Strike(toga.App):
         rounds_box.add(label, rounds_switch)
 
         # Buttons
-        save_button = toga.Button("Save", on_press=save, style=Pack(padding_left=20))
-        cancel_button = toga.Button("Cancel", on_press=cancel)
+        save_button = toga.Button("Save", on_press=on_save, style=Pack(padding_left=20))
+        cancel_button = toga.Button("Cancel", on_press=on_cancel)
         padding = toga.Box(style=Pack(flex=1))
         button_box = toga.Box(style=Pack(direction="row", padding=20))
         button_box.add(padding, cancel_button, save_button)
@@ -100,6 +148,7 @@ class Strike(toga.App):
         box = toga.Box(style=Pack(direction="column", padding=10))
         box.add(server_box, alpha_box, beta_box, rounds_box, button_box)
 
+        init_prefs()
         return box
 
 
