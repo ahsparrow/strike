@@ -3,7 +3,7 @@ Bell striking statistics
 """
 
 import toga
-from toga.style import Pack
+from toga.style.pack import Pack
 
 
 class Strike(toga.App):
@@ -13,42 +13,22 @@ class Strike(toga.App):
         rms = toga.Box()
         faults = toga.Box()
 
-        container = toga.OptionContainer(
+        self.container = toga.OptionContainer(
             content=[("Score", score), ("Line", line), ("RMS", rms), ("Faults", faults)]
         )
 
-        cmd_prefs = toga.Command(
-            self.action_prefs,
-            "Preferences",
-            order=4,
-            section=2
-        )
+        self.prefs_content = self.prefs_box()
 
-        cmd_auto = toga.Command(
-            self.action_auto,
-            "Auto",
-            order=1,
-            section=1
-        )
-        cmd_prev = toga.Command(
-            self.action_prev,
-            "Prev",
-            order=2,
-            section=1
-        )
-        cmd_next = toga.Command(
-            self.action_next,
-            "Next",
-            order=3,
-            section=1
-        )
+        cmd_prefs = toga.Command(self.action_prefs, "Preferences", order=4, section=2)
+
+        cmd_auto = toga.Command(self.action_auto, "Auto", order=1, section=1)
+        cmd_prev = toga.Command(self.action_prev, "Prev", order=2, section=1)
+        cmd_next = toga.Command(self.action_next, "Next", order=3, section=1)
 
         self.commands.add(cmd_auto, cmd_prev, cmd_next, cmd_prefs)
 
         self.main_window = toga.MainWindow(title=self.formal_name)
-        self.main_window.content = container
-
-
+        self.main_window.content = self.container
         self.main_window.show()
 
     def action_auto(self, widget):
@@ -61,7 +41,66 @@ class Strike(toga.App):
         print("Action - next")
 
     def action_prefs(self, widget):
-        print("Action - prefs")
+        self.main_window.content = self.prefs_content
+
+    def prefs_box(self):
+        def save(widget):
+            self.main_window.content = self.container
+
+        def cancel(widget):
+            self.main_window.content = self.container
+
+        # CANBell server
+        label = toga.Label(
+            "CANBell Server",
+            style=Pack(width=200, text_align="right", padding_right=10),
+        )
+        server_input = toga.TextInput(style=Pack(width=150))
+        server_box = toga.Box(
+            style=Pack(direction="row", padding=10, alignment="center")
+        )
+        server_box.add(label, server_input)
+
+        # Alpha filter coefficient
+        label = toga.Label(
+            "Alpha", style=Pack(width=200, text_align="right", padding_right=10)
+        )
+        alpha_input = toga.TextInput(style=Pack(width=150))
+        alpha_box = toga.Box(
+            style=Pack(direction="row", padding=10, alignment="center")
+        )
+        alpha_box.add(label, alpha_input)
+
+        # Beta filter coefficient
+        label = toga.Label(
+            "Beta", style=Pack(width=200, text_align="right", padding_right=10)
+        )
+        beta_input = toga.TextInput(style=Pack(width=150))
+        beta_box = toga.Box(style=Pack(direction="row", padding=10, alignment="center"))
+        beta_box.add(label, beta_input)
+
+        # Include rounds
+        label = toga.Label(
+            "Include Rounds",
+            style=Pack(width=200, text_align="right", padding_right=10),
+        )
+        rounds_switch = toga.Switch("")
+        rounds_box = toga.Box(
+            style=Pack(direction="row", padding=10, alignment="center")
+        )
+        rounds_box.add(label, rounds_switch)
+
+        # Buttons
+        save_button = toga.Button("Save", on_press=save, style=Pack(padding_left=20))
+        cancel_button = toga.Button("Cancel", on_press=cancel)
+        padding = toga.Box(style=Pack(flex=1))
+        button_box = toga.Box(style=Pack(direction="row", padding=20))
+        button_box.add(padding, cancel_button, save_button)
+
+        box = toga.Box(style=Pack(direction="column", padding=10))
+        box.add(server_box, alpha_box, beta_box, rounds_box, button_box)
+
+        return box
 
 
 def main():
