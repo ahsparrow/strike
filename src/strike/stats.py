@@ -46,6 +46,17 @@ def alpha_beta(nbells, strikes, alpha=0.4, beta=0.1):
         strike["est"] = tk
 
 
+# Calcuate overall percentage score
+def calculate_score(rows, threshold=0.05):
+    score = 0
+    for row in rows:
+        max_error = max([abs(bell["est"] - bell["time"]) for bell in row])
+        if max_error < threshold:
+            score += 1
+
+    return 100 * score / len(rows)
+
+
 # Calculate RMS error for all bells
 def calculate_rms_errors(sorted_rows):
     nbells = len(sorted_rows[0])
