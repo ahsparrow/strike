@@ -2,23 +2,31 @@
 Bell striking statistics
 """
 
+import csv
+import io
 import json
 import os
 from pathlib import Path
 
+import httpx
 import toga
 import toga_chart
 from toga.style.pack import Pack
 from toga.validators import LengthBetween, Number
+
+from . import stats
 
 
 class Strike(toga.App):
     def startup(self):
         self.load_prefs()
 
+        self.touch = 0
+        self.rms_errors = None
+
         score = toga.Box()
         line = self.line_box()
-        rms = toga.Box()
+        rms = self.rms_box()
         faults = toga.Box()
 
         self.container = toga.OptionContainer(
@@ -39,17 +47,43 @@ class Strike(toga.App):
         self.main_window.content = self.container
         self.main_window.show()
 
-    def action_auto(self, widget):
+    async def action_auto(self, widget):
         print("Action - auto")
+        catalog = await self.get_catalog()
+        print(catalog)
 
-    def action_prev(self, widget):
+    async def action_prev(self, widget):
         print("Action - prev")
+        catalog = await self.get_catalog()
+        if self.touch == 0 or self.touch > len(catalog):
+            self.touch = 1
+        elif self.touch != 1:
+            self.touch -= 1
 
-    def action_next(self, widget):
+        await self.update()
+
+    async def action_next(self, widget):
         print("Action - next")
+        catalog = await self.get_catalog()
+        ntouches = len(catalog)
+        if self.touch == 0 or self.touch >= (ntouches - 1):
+            self.touch = len(catalog)
+        else:
+            self.touch += 1
+
+        await self.update()
 
     def action_prefs(self, widget):
         self.main_window.content = self.prefs_content
+
+    async def get_catalog(self):
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"http://{self.server}/log")
+
+        reader = csv.DictReader(io.StringIO(response.text))
+        catalog = [x for x in reader]
+
+        return catalog
 
     def load_prefs(self):
         try:
@@ -63,6 +97,24 @@ class Strike(toga.App):
         self.beta = prefs.get("beta", "0.1")
         self.include_rounds = prefs.get("rounds", False)
 
+    async def update(self):
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"http://{self.server}/log/{self.touch}")
+
+        reader = csv.DictReader(io.StringIO(response.text))
+        data = [
+            {"bell": int(x["bell"]), "time": int(x["ticks_ms"]) / 1000} for x in reader
+        ]
+
+        nbells, strikes = stats.whole_rows(data)
+        stats.alpha_beta(nbells, strikes, self.alpha, self.beta)
+
+        rows = list(zip(*[iter(strikes)] * nbells))
+        sorted_rows = [sorted(row, key=lambda x: x["bell"]) for row in rows]
+
+        self.rms_errors = stats.calculate_rms_errors(sorted_rows)
+        self.rms_chart.redraw()
+
     def line_box(self):
         self.line_chart = toga_chart.Chart(
             style=Pack(flex=1), on_draw=self.draw_line_chart
@@ -70,6 +122,29 @@ class Strike(toga.App):
         box = toga.Box(children=[self.line_chart])
 
         return box
+
+    def rms_box(self):
+        self.rms_chart = toga_chart.Chart(
+            style=Pack(flex=1), on_draw=self.draw_rms_chart
+        )
+        box = toga.Box(children=[self.rms_chart])
+
+        return box
+
+    def draw_rms_chart(self, chart, figure, *args, **kwargs):
+        if self.rms_errors is None:
+            return
+
+        nbells = len(self.rms_errors)
+        rms_errors = [rms * 1000 for rms in self.rms_errors]
+        colours = ["orange" if error > 50 else "green" for error in rms_errors]
+
+        ax = figure.add_subplot(1, 1, 1)
+        ax.bar(range(1, nbells + 1), rms_errors, color=colours)
+
+        ax.set_title("RMS Errors")
+        ax.set_ylabel("Error (ms)")
+        figure.tight_layout()
 
     def draw_line_chart(self, chart, figure, *args, **kwargs):
         ax = figure.add_subplot(1, 1, 1)
@@ -87,8 +162,8 @@ class Strike(toga.App):
         def on_save(widget):
             if server_input.is_valid and alpha_input.is_valid and beta_input.is_valid:
                 self.server = server_input.value
-                self.alpha = alpha_input.value
-                self.beta = beta_input.value
+                self.alpha = float(alpha_input.value)
+                self.beta = float(beta_input.value)
                 self.include_rounds = rounds_switch.value
 
                 prefs = {
