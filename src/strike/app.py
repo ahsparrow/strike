@@ -38,8 +38,20 @@ class Strike(toga.App):
         cmd_prefs = toga.Command(self.action_prefs, "Preferences", order=4, section=2)
 
         cmd_auto = toga.Command(self.action_auto, "Auto", order=1, section=1)
-        cmd_prev = toga.Command(self.action_prev, "Prev", order=2, section=1)
-        cmd_next = toga.Command(self.action_next, "Next", order=3, section=1)
+        cmd_prev = toga.Command(
+            self.action_prev,
+            "Prev",
+            order=2,
+            section=1,
+            shortcut=toga.Key.MOD_1 + "p",
+        )
+        cmd_next = toga.Command(
+            self.action_next,
+            "Next",
+            order=3,
+            section=1,
+            shortcut=toga.Key.MOD_1 + "n",
+        )
 
         self.commands.add(cmd_auto, cmd_prev, cmd_next, cmd_prefs)
 
@@ -142,8 +154,9 @@ class Strike(toga.App):
         ax = figure.add_subplot(1, 1, 1)
         ax.bar(range(1, nbells + 1), rms_errors, color=colours)
 
-        ax.set_title("RMS Errors")
-        ax.set_ylabel("Error (ms)")
+        ax.set_title(f"RMS Accuracy - Touch {self.touch}")
+        ax.set_ylabel("Time (ms)")
+        ax.set_ylim(0, 100)
         figure.tight_layout()
 
     def draw_line_chart(self, chart, figure, *args, **kwargs):
