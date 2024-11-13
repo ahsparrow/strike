@@ -60,10 +60,12 @@ class Strike(toga.App):
         self.main_window.content = self.container
         self.main_window.show()
 
+    # Auto action
     async def action_auto(self, widget):
         catalog = await self.get_catalog()
         print(catalog)
 
+    # Previous action
     async def action_prev(self, widget):
         catalog = await self.get_catalog()
         if self.touch == 0 or self.touch > len(catalog):
@@ -73,6 +75,7 @@ class Strike(toga.App):
 
         await self.update()
 
+    # Next action
     async def action_next(self, widget):
         catalog = await self.get_catalog()
         ntouches = len(catalog)
@@ -83,32 +86,9 @@ class Strike(toga.App):
 
         await self.update()
 
+    # Preferences action
     def action_prefs(self, widget):
         self.main_window.content = self.prefs_content
-
-    # Get catalog file from CANBell
-    async def get_catalog(self):
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"http://{self.server}/log")
-
-        reader = csv.DictReader(io.StringIO(response.text))
-        catalog = [x for x in reader]
-
-        return catalog
-
-    # Load stored preferences
-    def load_prefs(self):
-        try:
-            with open(Path(self.paths.config, "config.json"), "rt") as fp:
-                prefs = json.load(fp)
-        except FileNotFoundError:
-            prefs = {}
-
-        self.server = prefs.get("server", "192.168.4.1")
-        self.threshold = prefs.get("threshold", 50)
-        self.alpha = prefs.get("alpha", "0.4")
-        self.beta = prefs.get("beta", "0.1")
-        self.include_rounds = prefs.get("rounds", False)
 
     # Update results
     async def update(self):
@@ -223,6 +203,20 @@ class Strike(toga.App):
 
         figure.tight_layout()
 
+    # Load stored preferences
+    def load_prefs(self):
+        try:
+            with open(Path(self.paths.config, "config.json"), "rt") as fp:
+                prefs = json.load(fp)
+        except FileNotFoundError:
+            prefs = {}
+
+        self.server = prefs.get("server", "192.168.4.1")
+        self.threshold = prefs.get("threshold", 50)
+        self.alpha = prefs.get("alpha", "0.4")
+        self.beta = prefs.get("beta", "0.1")
+        self.include_rounds = prefs.get("rounds", False)
+
     # Preferences UI
     def prefs_box(self):
         def init_prefs():
@@ -333,6 +327,16 @@ class Strike(toga.App):
 
         init_prefs()
         return box
+
+    # Get catalog file from CANBell
+    async def get_catalog(self):
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"http://{self.server}/log")
+
+        reader = csv.DictReader(io.StringIO(response.text))
+        catalog = [x for x in reader]
+
+        return catalog
 
 
 def main():
