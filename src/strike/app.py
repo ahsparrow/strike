@@ -24,7 +24,7 @@ GOLD = "#f0c571"
 TEAL = "#59a89c"
 BLUE = "#0b8aa2"
 RED = "#e25759"
-DARK_RED = "#e25759"
+DARK_RED = "#9d2c00"
 PURPLE = "#7e4794"
 GREEN = "#36b700"
 
@@ -190,13 +190,7 @@ class Strike(toga.App):
         text.remove()
         y = 0.5 - scale * textheight / (2 * figheight)
         text = ax.text(
-            0.5,
-            y,
-            score,
-            ha="center",
-            va="bottom",
-            fontsize=fontsize,
-            transform=ax.transAxes,
+            0.5, y, score, ha="center", va="bottom", fontsize=fontsize, color=PURPLE
         )
 
     # RMS error chart
