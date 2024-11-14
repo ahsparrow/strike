@@ -9,12 +9,24 @@ import os
 from pathlib import Path
 
 import httpx
+import numpy as np
 import toga
 import toga_chart
+from matplotlib.ticker import FuncFormatter
 from toga.style.pack import Pack
 from toga.validators import Integer, LengthBetween, Number
 
 from . import stats
+
+# From www.simplifiedsciencepublishing.com
+GRAY = "#c8c8c8"
+GOLD = "#f0c571"
+TEAL = "#59a89c"
+BLUE = "#0b8aa2"
+RED = "#e25759"
+DARK_RED = "#e25759"
+PURPLE = "#7e4794"
+GREEN = "#36b700"
 
 
 class Strike(toga.App):
@@ -24,14 +36,20 @@ class Strike(toga.App):
         self.touch = 0
         self.score = None
         self.rms_errors = None
+        self.faults = None
 
         score = self.score_box()
         line = self.line_box()
         rms = self.rms_box()
-        faults = toga.Box()
+        faults = self.faults_box()
 
         self.container = toga.OptionContainer(
-            content=[("Score", score), ("Line", line), ("RMS", rms), ("Faults", faults)]
+            content=[
+                ("Score", score),
+                ("Line", line),
+                ("Accuracy", rms),
+                ("Striking", faults),
+            ]
         )
 
         self.prefs_content = self.prefs_box()
@@ -112,34 +130,36 @@ class Strike(toga.App):
         self.rms_errors = stats.calculate_rms_errors(sorted_rows)
         self.rms_chart.redraw()
 
-        self.score_chart.redraw()
+        self.faults = stats.calculate_faults(sorted_rows, self.threshold / 1000)
+        self.faults_chart.redraw()
 
     # Overall percent score display
     def score_box(self):
         self.score_chart = toga_chart.Chart(
             style=Pack(flex=1), on_draw=self.draw_score_chart
         )
-        box = toga.Box(children=[self.score_chart])
-
-        return box
+        return toga.Box(children=[self.score_chart])
 
     # Blue line display
     def line_box(self):
         self.line_chart = toga_chart.Chart(
             style=Pack(flex=1), on_draw=self.draw_line_chart
         )
-        box = toga.Box(children=[self.line_chart])
-
-        return box
+        return toga.Box(children=[self.line_chart])
 
     # RMS errors display
     def rms_box(self):
         self.rms_chart = toga_chart.Chart(
             style=Pack(flex=1), on_draw=self.draw_rms_chart
         )
-        box = toga.Box(children=[self.rms_chart])
+        return toga.Box(children=[self.rms_chart])
 
-        return box
+    # Faults per bell
+    def faults_box(self):
+        self.faults_chart = toga_chart.Chart(
+            style=Pack(flex=1), on_draw=self.draw_faults_chart
+        )
+        return toga.Box(children=[self.faults_chart])
 
     # Overall score chart
     def draw_score_chart(self, chart, figure, *args, **kwargs):
@@ -186,7 +206,7 @@ class Strike(toga.App):
 
         nbells = len(self.rms_errors)
         rms_errors = [rms * 1000 for rms in self.rms_errors]
-        colours = ["orange" if error > 50 else "green" for error in rms_errors]
+        colours = [GOLD if error > 50 else TEAL for error in rms_errors]
 
         ax = figure.add_subplot(1, 1, 1)
         ax.bar(range(1, nbells + 1), rms_errors, color=colours)
@@ -194,6 +214,37 @@ class Strike(toga.App):
         ax.set_title(f"RMS Accuracy - Touch {self.touch}")
         ax.set_ylabel("Time (ms)")
         ax.set_ylim(0, 100)
+        figure.tight_layout()
+
+    # Faults per bell chart
+    def draw_faults_chart(self, chart, figure, *args, **kwargs):
+        if self.faults is None:
+            return
+
+        nbells = len(self.faults)
+
+        hand_early = [-f["hand"]["early"] * 100 for f in self.faults]
+        hand_late = [f["hand"]["late"] * 100 for f in self.faults]
+        back_early = [-f["back"]["early"] * 100 for f in self.faults]
+        back_late = [f["back"]["late"] * 100 for f in self.faults]
+
+        ax = figure.add_subplot(1, 1, 1)
+
+        x = np.arange(1, nbells + 1)
+        width = 0.35
+
+        ax.bar(x - width / 2 - 0.01, hand_early, width, label="Hand Early", color=RED)
+        ax.bar(x - width / 2 - 0.01, hand_late, width, label="Hand Late", color=PURPLE)
+        ax.bar(x + width / 2 + 0.01, back_early, width, label="Back Early", color=GREEN)
+        ax.bar(x + width / 2 + 0.01, back_late, width, label="Back Late", color=BLUE)
+        ax.legend(loc="upper right", ncols=2)
+        ax.set_title(
+            f"Touch {self.touch} - Early/late percent ({self.threshold:.0f}ms threshold)"
+        )
+        ax.set_ylabel("Percentage of blows early/late")
+        ax.set_ylim(-75, 75)
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda x, pos: str(int(abs(x)))))
+
         figure.tight_layout()
 
     # Blue line chart
