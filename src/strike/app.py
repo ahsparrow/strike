@@ -28,12 +28,16 @@ DARK_RED = "#9d2c00"
 PURPLE = "#7e4794"
 GREEN = "#36b700"
 
+MIN_LINE_ROWS = 10
+MAX_LINE_ROWS = 100
+
 
 class Strike(toga.App):
     def startup(self):
         self.load_prefs()
 
         self.touch = 0
+        self.rows = []
         self.score = None
         self.rms_errors = None
         self.faults = None
@@ -42,6 +46,10 @@ class Strike(toga.App):
         line = self.line_box()
         rms = self.rms_box()
         faults = self.faults_box()
+
+        # Line display parameters
+        self.line_row = 0
+        self.line_nrows = MIN_LINE_ROWS
 
         self.container = toga.OptionContainer(
             content=[
@@ -121,17 +129,21 @@ class Strike(toga.App):
         nbells, strikes = stats.whole_rows(data)
         stats.alpha_beta(nbells, strikes, self.alpha, self.beta)
 
-        rows = list(zip(*[iter(strikes)] * nbells))
-        sorted_rows = [sorted(row, key=lambda x: x["bell"]) for row in rows]
+        self.rows = list(zip(*[iter(strikes)] * nbells))
+        self.sorted_rows = [sorted(row, key=lambda x: x["bell"]) for row in self.rows]
 
-        self.score = stats.calculate_score(rows, self.threshold / 1000)
+        self.score = stats.calculate_score(self.rows, self.threshold / 1000)
         self.score_chart.redraw()
 
-        self.rms_errors = stats.calculate_rms_errors(sorted_rows)
+        self.rms_errors = stats.calculate_rms_errors(self.sorted_rows)
         self.rms_chart.redraw()
 
-        self.faults = stats.calculate_faults(sorted_rows, self.threshold / 1000)
+        self.faults = stats.calculate_faults(self.sorted_rows, self.threshold / 1000)
         self.faults_chart.redraw()
+
+        self.line_row = 0
+        self.line_nrows = min(24, len(self.rows))
+        self.line_chart.redraw()
 
     # Overall percent score display
     def score_box(self):
@@ -142,22 +154,70 @@ class Strike(toga.App):
 
     # Blue line display
     def line_box(self):
+        def on_zoom(widget):
+            match widget.id:
+                case "in":
+                    self.line_nrows = self.line_nrows // 2
+                    if self.line_nrows < MIN_LINE_ROWS:
+                        self.line_nrows = MIN_LINE_ROWS
+                case "out":
+                    self.line_nrows = self.line_nrows * 2
+                    self.line_nrows = min(
+                        self.line_nrows, len(self.rows), MAX_LINE_ROWS
+                    )
+
+                    if self.line_row + self.line_nrows > len(self.rows):
+                        self.line_row = len(self.rows) - self.line_nrows
+
+            self.line_chart.redraw()
+
+        def on_scroll(widget):
+            self.line_row = int(widget.value * (len(self.rows) - self.line_nrows))
+            self.line_chart.redraw()
+
         self.line_chart = toga_chart.Chart(
-            style=Pack(flex=1), on_draw=self.draw_line_chart
+            style=Pack(flex=1, padding=10), on_draw=self.draw_line_chart
         )
-        return toga.Box(children=[self.line_chart])
+
+        zoomin_button = toga.Button(
+            "In", id="in", on_press=on_zoom, style=Pack(padding_right=10)
+        )
+        zoomout_button = toga.Button(
+            "Out", id="out", on_press=on_zoom, style=Pack(padding_right=10)
+        )
+        self.slider = toga.Slider(style=Pack(flex=1), on_release=on_scroll)
+
+        button_box = toga.Box(
+            children=[
+                # start_button,
+                # left_button,
+                # right_button,
+                # end_button,
+                self.slider,
+                zoomin_button,
+                zoomout_button,
+            ],
+            style=Pack(direction="row", padding_bottom=10, padding_top=10),
+        )
+
+        return toga.Box(
+            children=[self.line_chart, button_box],
+            style=Pack(direction="column", alignment="center"),
+        )
 
     # RMS errors display
     def rms_box(self):
         self.rms_chart = toga_chart.Chart(
-            style=Pack(flex=1), on_draw=self.draw_rms_chart
+            style=Pack(flex=1, padding=10), on_draw=self.draw_rms_chart
         )
-        return toga.Box(children=[self.rms_chart])
+        return toga.Box(
+            children=[self.rms_chart],
+        )
 
     # Faults per bell
     def faults_box(self):
         self.faults_chart = toga_chart.Chart(
-            style=Pack(flex=1), on_draw=self.draw_faults_chart
+            style=Pack(flex=1, padding=10), on_draw=self.draw_faults_chart
         )
         return toga.Box(children=[self.faults_chart])
 
@@ -193,6 +253,34 @@ class Strike(toga.App):
             0.5, y, score, ha="center", va="bottom", fontsize=fontsize, color=PURPLE
         )
 
+    # Blue line chart
+    def draw_line_chart(self, chart, figure, *args, **kwargs):
+        if len(self.rows) < MIN_LINE_ROWS:
+            return
+
+        figure.set_layout_engine("constrained")
+
+        ax = figure.add_subplot(1, 1, 1)
+        ax.autoscale(None, "x", tight=True)
+        ax.set_yticks([])
+
+        nbells = len(self.sorted_rows[0])
+        rows = self.sorted_rows[self.line_row : self.line_row + self.line_nrows]
+        x = np.arange(self.line_row, self.line_row + self.line_nrows)
+
+        for bell in range(0, nbells):
+            offset = [row[bell]["time"] - min([s["est"] for s in row]) for row in rows]
+            marker = f"${bell+1}$" if self.line_nrows <= 50 else ""
+            ax.plot(x, offset, "-", marker=marker, markersize=15)
+
+            if self.show_estimates:
+                offset = [
+                    row[bell]["est"] - min([s["est"] for s in row]) for row in rows
+                ]
+                ax.plot(x, offset, "o")
+
+        ax.set_title(f"Touch {self.touch}")
+
     # RMS error chart
     def draw_rms_chart(self, chart, figure, *args, **kwargs):
         if self.rms_errors is None:
@@ -202,13 +290,13 @@ class Strike(toga.App):
         rms_errors = [rms * 1000 for rms in self.rms_errors]
         colours = [GOLD if error > 50 else TEAL for error in rms_errors]
 
+        figure.set_layout_engine("constrained")
         ax = figure.add_subplot(1, 1, 1)
         ax.bar(range(1, nbells + 1), rms_errors, color=colours)
 
         ax.set_title(f"RMS Accuracy - Touch {self.touch}")
         ax.set_ylabel("Time (ms)")
         ax.set_ylim(0, 100)
-        figure.tight_layout()
 
     # Faults per bell chart
     def draw_faults_chart(self, chart, figure, *args, **kwargs):
@@ -222,6 +310,7 @@ class Strike(toga.App):
         back_early = [-f["back"]["early"] * 100 for f in self.faults]
         back_late = [f["back"]["late"] * 100 for f in self.faults]
 
+        figure.set_layout_engine("constrained")
         ax = figure.add_subplot(1, 1, 1)
 
         x = np.arange(1, nbells + 1)
@@ -239,15 +328,6 @@ class Strike(toga.App):
         ax.set_ylim(-75, 75)
         ax.yaxis.set_major_formatter(FuncFormatter(lambda x, pos: str(int(abs(x)))))
 
-        figure.tight_layout()
-
-    # Blue line chart
-    def draw_line_chart(self, chart, figure, *args, **kwargs):
-        ax = figure.add_subplot(1, 1, 1)
-        ax.plot([1, 4, 9, 16])
-
-        figure.tight_layout()
-
     # Load stored preferences
     def load_prefs(self):
         try:
@@ -260,6 +340,7 @@ class Strike(toga.App):
         self.threshold = prefs.get("threshold", 50)
         self.alpha = prefs.get("alpha", "0.4")
         self.beta = prefs.get("beta", "0.1")
+        self.show_estimates = prefs.get("estimates", False)
         self.include_rounds = prefs.get("rounds", False)
 
     # Preferences UI
@@ -269,9 +350,10 @@ class Strike(toga.App):
             threshold_input.value = self.threshold
             alpha_input.value = self.alpha
             beta_input.value = self.beta
+            estimates_switch.value = self.show_estimates
             rounds_switch.value = self.include_rounds
 
-        def on_save(widget):
+        async def on_save(widget):
             if (
                 server_input.is_valid
                 and threshold_input.is_valid
@@ -282,6 +364,7 @@ class Strike(toga.App):
                 self.threshold = int(threshold_input.value)
                 self.alpha = float(alpha_input.value)
                 self.beta = float(beta_input.value)
+                self.show_estimates = estimates_switch.value
                 self.include_rounds = rounds_switch.value
 
                 prefs = {
@@ -289,6 +372,7 @@ class Strike(toga.App):
                     "threshold": self.threshold,
                     "alpha": self.alpha,
                     "beta": self.beta,
+                    "estimates": self.show_estimates,
                     "rounds": self.include_rounds,
                 }
                 os.makedirs(self.paths.config, exist_ok=True)
@@ -296,6 +380,7 @@ class Strike(toga.App):
                     json.dump(prefs, fp)
 
                 self.main_window.content = self.container
+                await self.update()
 
         def on_cancel(widget):
             init_prefs()
@@ -349,6 +434,17 @@ class Strike(toga.App):
         beta_box = toga.Box(style=Pack(direction="row", padding=10, alignment="center"))
         beta_box.add(label, beta_input)
 
+        # Show estimated strikes on line chart
+        label = toga.Label(
+            "Show estimates",
+            style=Pack(width=200, text_align="right", padding_right=10),
+        )
+        estimates_switch = toga.Switch("")
+        estimates_box = toga.Box(
+            style=Pack(direction="row", padding=10, alignment="center")
+        )
+        estimates_box.add(label, estimates_switch)
+
         # Include rounds
         label = toga.Label(
             "Include Rounds",
@@ -368,7 +464,15 @@ class Strike(toga.App):
         button_box.add(padding, cancel_button, save_button)
 
         box = toga.Box(style=Pack(direction="column", padding=10))
-        box.add(server_box, threshold_box, alpha_box, beta_box, rounds_box, button_box)
+        box.add(
+            server_box,
+            threshold_box,
+            alpha_box,
+            beta_box,
+            estimates_box,
+            rounds_box,
+            button_box,
+        )
 
         init_prefs()
         return box
