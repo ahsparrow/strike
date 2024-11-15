@@ -28,7 +28,9 @@ def whole_rows(strikes, include_rounds=True):
         rounds = list(range(1, nbells + 1))
         # Discard rounds at start
         while True:
-            if len(rows) >= 2 and list([s["bell"] for s in rows[1]]) == rounds:
+            if len(rows) >= 3 and list([s["bell"] for s in rows[2]]) == rounds:
+                # Discard two rows at a time, so result starts at handstroke
+                rows.pop(0)
                 rows.pop(0)
             else:
                 break
@@ -106,7 +108,7 @@ def calculate_faults(sorted_rows, threshold=0.05):
         late_error = 0
         for strike in strikes:
             err = strike["time"] - strike["est"]
-            if abs(err) > 0.05:
+            if abs(err) > threshold:
                 if err > 0:
                     late_error += 1
                 else:
