@@ -186,14 +186,12 @@ class Strike(toga.App):
         zoomout_button = toga.Button(
             "Out", id="out", on_press=on_zoom, style=Pack(padding_right=10)
         )
-        self.slider = toga.Slider(style=Pack(flex=1), on_release=on_scroll)
+        self.slider = toga.Slider(
+            style=Pack(flex=1, padding_right=10), on_release=on_scroll
+        )
 
         button_box = toga.Box(
             children=[
-                # start_button,
-                # left_button,
-                # right_button,
-                # end_button,
                 self.slider,
                 zoomin_button,
                 zoomout_button,
