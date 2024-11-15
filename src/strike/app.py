@@ -258,24 +258,44 @@ class Strike(toga.App):
         if len(self.rows) < MIN_LINE_ROWS:
             return
 
-        figure.set_layout_engine("constrained")
-
-        ax = figure.add_subplot(1, 1, 1)
-        ax.autoscale(None, "x", tight=True)
-        ax.set_yticks([])
-
         nbells = len(self.sorted_rows[0])
-        rows = self.sorted_rows[self.line_row : self.line_row + self.line_nrows]
+        sorted_rows = self.sorted_rows[self.line_row : self.line_row + self.line_nrows]
         x = np.arange(self.line_row, self.line_row + self.line_nrows)
 
-        for bell in range(0, nbells):
-            offset = [row[bell]["time"] - min([s["est"] for s in row]) for row in rows]
-            marker = f"${bell+1}$" if self.line_nrows <= 50 else ""
-            ax.plot(x, offset, "-", marker=marker, markersize=15)
+        figure.set_layout_engine("constrained")
+        ax = figure.add_subplot(1, 1, 1)
+        ax.autoscale(None, "x", tight=True)
+        ax.set_frame_on(False)
+        ax.set_yticks([])
+        ax.set_prop_cycle(
+            color=[
+                "black",
+                "tab:orange",
+                "tab:green",
+                "tab:blue",
+                "tab:olive",
+                "tab:red",
+            ]
+        )
 
-            if self.show_estimates:
+        for bell in range(0, nbells):
+            offset = [
+                row[bell]["time"] - min([s["est"] for s in row]) for row in sorted_rows
+            ]
+            marker = f"${bell+1}$" if self.line_nrows <= 50 else ""
+            ax.plot(
+                x,
+                offset,
+                "-",
+                marker=marker,
+                markersize=15,
+            )
+
+        if self.show_estimates:
+            for bell in range(0, nbells):
                 offset = [
-                    row[bell]["est"] - min([s["est"] for s in row]) for row in rows
+                    row[bell]["time"] - min([s["est"] for s in row])
+                    for row in sorted_rows
                 ]
                 ax.plot(x, offset, "o")
 
