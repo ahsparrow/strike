@@ -144,6 +144,7 @@ class Strike(toga.App):
         self.line_row = 0
         self.line_nrows = min(24, len(self.rows))
         self.line_chart.redraw()
+        self.slider.value = 0
 
     # Overall percent score display
     def score_box(self):
@@ -294,7 +295,7 @@ class Strike(toga.App):
         if self.show_estimates:
             for bell in range(0, nbells):
                 offset = [
-                    row[bell]["time"] - min([s["est"] for s in row])
+                    row[bell]["est"] - min([s["est"] for s in row])
                     for row in sorted_rows
                 ]
                 ax.plot(x, offset, "o")
