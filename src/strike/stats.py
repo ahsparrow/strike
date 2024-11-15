@@ -2,8 +2,8 @@ import itertools
 import math
 
 
-# Get whole rows, discard any strikes after an imcomplete row
-def whole_rows(strikes):
+# Get whole rows, discard any strikes after an incomplete row
+def whole_rows(strikes, include_rounds=True):
     # Sort strikes in time order
     strikes.sort(key=lambda s: s["time"])
 
@@ -15,9 +15,33 @@ def whole_rows(strikes):
     rows = zip(*iterators)
 
     # Terminate after any incomplete row
-    rows = itertools.takewhile(
-        lambda row: len(set(x["bell"] for x in row)) == nbells, rows
+    rows = list(
+        itertools.takewhile(
+            lambda row: len(set(x["bell"] for x in row)) == nbells, rows
+        )
     )
+
+    if nbells < 3:
+        return nbells, []
+
+    if not include_rounds:
+        rounds = list(range(1, nbells + 1))
+        # Discard rounds at start
+        while True:
+            if len(rows) >= 2 and list([s["bell"] for s in rows[1]]) == rounds:
+                rows.pop(0)
+            else:
+                break
+
+        # Discard rounds at end
+        while True:
+            if len(rows) >= 2 and list([s["bell"] for s in rows[-2]]) == rounds:
+                rows.pop()
+            else:
+                break
+
+        if len(rows) < 2:
+            return nbells, []
 
     return nbells, list(itertools.chain(*rows))
 
