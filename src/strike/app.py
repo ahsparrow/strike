@@ -269,11 +269,11 @@ class Strike(toga.App):
         ax.set_prop_cycle(
             color=[
                 "black",
-                "tab:orange",
-                "tab:green",
-                "tab:blue",
-                "tab:olive",
-                "tab:red",
+                GOLD,
+                GREEN,
+                BLUE,
+                GRAY,
+                RED,
             ]
         )
 
