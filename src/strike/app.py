@@ -126,13 +126,13 @@ class Strike(toga.App):
             {"bell": int(x["bell"]), "time": int(x["ticks_ms"]) / 1000} for x in reader
         ]
 
-        nbells, strikes = stats.whole_rows(data, self.include_rounds)
-        if len(strikes) < 60:
+        nbells, rows = stats.whole_rows(data, self.include_rounds)
+        if len(rows) < 10:
             return
 
-        stats.alpha_beta(nbells, strikes, self.alpha, self.beta)
+        self.rows = rows
+        stats.alpha_beta(nbells, self.rows, self.alpha, self.beta)
 
-        self.rows = list(zip(*[iter(strikes)] * nbells))
         self.sorted_rows = [sorted(row, key=lambda x: x["bell"]) for row in self.rows]
 
         self.score = stats.calculate_score(self.rows, self.threshold / 1000)

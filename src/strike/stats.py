@@ -43,11 +43,13 @@ def whole_rows(strikes, include_rounds=True):
         if len(rows) < 2:
             return nbells, []
 
-    return nbells, list(itertools.chain(*rows))
+    return nbells, rows
 
 
 # Alpha Beta filter (see https://en.wikipedia.org/wiki/Alpha_beta_filter)
-def alpha_beta(nbells, strikes, alpha=0.4, beta=0.1):
+def alpha_beta(nbells, rows, alpha=0.4, beta=0.1):
+    strikes = list(itertools.chain(*rows))
+
     # Intitial state estimates, tk is the strike time, dk is the time between strikes
     tk_1 = strikes[0]["time"]
     dk_1 = (strikes[-1]["time"] - tk_1) / (len(strikes) - 1) * nbells / (nbells + 0.5)
