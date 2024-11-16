@@ -7,6 +7,8 @@ import csv
 import io
 import json
 import os
+import platform
+from enum import Enum
 from pathlib import Path
 
 import httpx
@@ -34,22 +36,35 @@ MIN_LINE_ROWS = 10
 MAX_LINE_ROWS = 100
 
 
+class Mode(Enum):
+    LOCAL = 1
+    REMOTE = 2
+
+
 class Strike(toga.App):
     def startup(self):
         self.load_prefs()
 
-        self.touch = 0
+        self.mode = Mode.REMOTE
+
+        # Touch info
+        self.remote_touch = 0
+        self.local_path = None
+
+        # Striking results
         self.rows = []
         self.score = None
         self.rms_errors = None
         self.faults = None
 
+        # CANBell websocket task
         self.ws_task = None
 
         # Line display parameters
         self.line_row = 0
         self.line_nrows = MIN_LINE_ROWS
 
+        # Main UI
         score = self.score_box()
         line = self.line_box()
         rms = self.rms_box()
@@ -63,28 +78,42 @@ class Strike(toga.App):
             ]
         )
 
+        # Preferences UI
         self.prefs_content = self.prefs_box()
 
+        # Commands
         cmd_prefs = toga.Command(self.action_prefs, "Preferences", order=4, section=2)
-
         cmd_auto = toga.Command(self.action_auto, "Auto", order=1, section=1)
         cmd_prev = toga.Command(
-            self.action_prev,
+            self.action_nav,
             "Prev",
+            id="prev",
             order=2,
             section=1,
-            shortcut=toga.Key.MOD_1 + "p",
+            shortcut="p",
         )
         cmd_next = toga.Command(
-            self.action_next,
+            self.action_nav,
             "Next",
+            id="next",
             order=3,
             section=1,
-            shortcut=toga.Key.MOD_1 + "n",
+            shortcut="n",
         )
-
         self.commands.add(cmd_auto, cmd_prev, cmd_next, cmd_prefs)
 
+        # TBD replace with platform.system() when upgraded to python 3.13
+        if "android" not in platform.platform():
+            # File open for desktop environments
+            cmd_open = toga.Command(
+                self.action_open, "Open...", group=toga.Group.APP, order=1
+            )
+            cmd_connect = toga.Command(
+                self.action_connect, "Connect", group=toga.Group.APP, order=2
+            )
+            self.commands.add(cmd_open, cmd_connect)
+
+        # Top level window
         self.main_window = toga.MainWindow(title=self.formal_name)
         self.main_window.content = self.container
         self.main_window.show()
@@ -95,68 +124,125 @@ class Strike(toga.App):
             async with connect(f"ws://{self.server}/status") as websocket:
                 while True:
                     msg = await websocket.recv()
-                    print(msg)
-
                     if msg == "idle":
-                        catalog = await self.get_catalog()
-                        self.touch = len(catalog)
-
-                        await self.update()
-
+                        await self.nav_remote("last")
                     else:
                         self.clear()
 
         if self.ws_task is None or self.ws_task.cancelled():
-            print("Starting WS task")
             self.ws_task = asyncio.create_task(ws_recv())
 
-    # Previous action
-    async def action_prev(self, widget):
+    # Navigation action
+    async def action_nav(self, widget):
+        # Cancel websocket updates
         if self.ws_task is not None:
             self.ws_task.cancel()
 
-        catalog = await self.get_catalog()
-        if self.touch == 0 or self.touch > len(catalog):
-            self.touch = 1
-        elif self.touch != 1:
-            self.touch -= 1
-
-        await self.update()
-
-    # Next action
-    async def action_next(self, widget):
-        if self.ws_task is not None:
-            self.ws_task.cancel()
-
-        catalog = await self.get_catalog()
-        ntouches = len(catalog)
-        if self.touch == 0 or self.touch >= (ntouches - 1):
-            self.touch = len(catalog)
+        if self.mode == Mode.REMOTE:
+            await self.nav_remote(widget.id)
         else:
-            self.touch += 1
-
-        await self.update()
+            self.nav_local(widget.id)
 
     # Preferences action
     def action_prefs(self, widget):
         self.main_window.content = self.prefs_content
 
-    # Update results
-    async def update(self):
+    # File open action
+    async def action_open(self, widget):
+        # Cancel websocket updates
+        if self.ws_task is not None:
+            self.ws_task.cancel()
+
+        file_dialog = toga.OpenFileDialog("Touch file", file_types=["csv"])
+        path = await self.main_window.dialog(file_dialog)
+
+        if path:
+            self.mode = Mode.LOCAL
+            self.local_path = Path(path)
+            self.load_touch(self.local_path)
+
+    # Remote data action
+    async def action_connect(self, widget):
+        if self.mode == Mode.REMOTE:
+            return
+
+        self.mode = Mode.REMOTE
+
+    # Navigate remote touches
+    async def nav_remote(self, nav):
+        catalog = await self.get_catalog()
+        ntouches = len(catalog)
+
+        match nav:
+            case "first":
+                self.remote_touch = 1
+            case "last":
+                self.remote_touch = ntouches
+            case "next":
+                if self.remote_touch == 0 or self.remote_touch >= ntouches:
+                    self.remote_touch = ntouches
+                else:
+                    self.remote_touch += 1
+            case "prev":
+                if self.remote_touch == 0 or self.remote_touch == 1:
+                    self.remote_touch = 1
+                else:
+                    self.remote_touch -= 1
+
+        await self.download()
+
+    # Navigate local touches
+    def nav_local(self, nav):
+        paths = sorted(self.local_path.parent.glob("touch_??.csv"))
+        n = paths.index(self.local_path)
+
+        path = self.local_path
+        match nav:
+            case "first":
+                path = paths[0]
+            case "last":
+                path = paths[-1]
+            case "next":
+                if n < len(paths) - 1:
+                    path = paths[n + 1]
+            case "prev":
+                if n > 0:
+                    path = paths[n - 1]
+
+        self.local_path = path
+        self.load_touch(path)
+
+    # Download touch data
+    async def download(self):
         async with httpx.AsyncClient() as client:
-            response = await client.get(f"http://{self.server}/log/{self.touch}")
+            response = await client.get(f"http://{self.server}/log/{self.remote_touch}")
 
         reader = csv.DictReader(io.StringIO(response.text))
         data = [
             {"bell": int(x["bell"]), "time": int(x["ticks_ms"]) / 1000} for x in reader
         ]
+        self.rows = stats.whole_rows(data, self.include_rounds)
 
-        nbells, rows = stats.whole_rows(data, self.include_rounds)
-        if len(rows) < 10:
+        self.update()
+
+    # Load local touch data
+    def load_touch(self, path):
+        with open(self.local_path, "rt") as csvfile:
+            reader = csv.DictReader(csvfile)
+            data = [
+                {"bell": int(x["bell"]), "time": int(x["ticks_ms"]) / 1000}
+                for x in reader
+            ]
+            self.rows = stats.whole_rows(data, self.include_rounds)
+
+            self.update()
+
+    # Update results
+    def update(self):
+        if len(self.rows) < 10:
             return
 
-        self.rows = rows
-        stats.alpha_beta(nbells, self.rows, self.alpha, self.beta)
+        stats.alpha_beta(self.rows, self.alpha, self.beta)
 
         self.sorted_rows = [sorted(row, key=lambda x: x["bell"]) for row in self.rows]
 
@@ -177,7 +263,7 @@ class Strike(toga.App):
     # Clear results
     def clear(self):
         self.score = None
-        self.rows = []
+        self.data = []
         self.rms_errors = None
         self.faults = None
 
@@ -294,7 +380,7 @@ class Strike(toga.App):
             0.5, y, score, ha="center", va="bottom", fontsize=fontsize, color=PURPLE
         )
 
-        ax.set_title(f"Touch {self.touch}")
+        ax.set_title(self.touch_title())
 
     # Blue line chart
     def draw_line_chart(self, chart, figure, *args, **kwargs):
@@ -342,7 +428,7 @@ class Strike(toga.App):
                 ]
                 ax.plot(x, offset, "o")
 
-        ax.set_title(f"Touch {self.touch}")
+        ax.set_title(self.touch_title())
 
     # RMS error chart
     def draw_rms_chart(self, chart, figure, *args, **kwargs):
@@ -358,7 +444,7 @@ class Strike(toga.App):
         ax = figure.add_subplot(1, 1, 1)
         ax.bar(range(1, nbells + 1), rms_errors, color=colours)
 
-        ax.set_title(f"RMS Accuracy - Touch {self.touch}")
+        ax.set_title(f"{self.touch_title()} - RMS Accuracy")
         ax.set_ylabel("Time (ms)")
         ax.set_ylim(0, 100)
 
@@ -386,7 +472,7 @@ class Strike(toga.App):
         ax.bar(x + width / 2 + 0.01, back_late, width, label="Back Late", color=BLUE)
         ax.legend(loc="upper right", ncols=2)
         ax.set_title(
-            f"Touch {self.touch} - Early/late percent ({self.threshold:.0f}ms threshold)"
+            f"{self.touch_title()} - Early/late percent ({self.threshold:.0f}ms threshold)"
         )
         ax.set_ylabel("Percentage of blows early/late")
         ax.set_ylim(-75, 75)
@@ -540,6 +626,13 @@ class Strike(toga.App):
 
         init_prefs()
         return box
+
+    def touch_title(self):
+        return (
+            f"Touch {self.remote_touch}"
+            if self.mode == Mode.REMOTE
+            else self.local_path.name
+        )
 
     # Get catalog file from CANBell
     async def get_catalog(self):
