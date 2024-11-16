@@ -2,6 +2,7 @@
 Bell striking statistics
 """
 
+import asyncio
 import csv
 import io
 import json
@@ -15,6 +16,7 @@ import toga_chart
 from matplotlib.ticker import FuncFormatter
 from toga.style.pack import Pack
 from toga.validators import Integer, LengthBetween, Number
+from websockets.asyncio.client import connect
 
 from . import stats
 
@@ -42,15 +44,16 @@ class Strike(toga.App):
         self.rms_errors = None
         self.faults = None
 
-        score = self.score_box()
-        line = self.line_box()
-        rms = self.rms_box()
-        faults = self.faults_box()
+        self.ws_task = None
 
         # Line display parameters
         self.line_row = 0
         self.line_nrows = MIN_LINE_ROWS
 
+        score = self.score_box()
+        line = self.line_box()
+        rms = self.rms_box()
+        faults = self.faults_box()
         self.container = toga.OptionContainer(
             content=[
                 ("Score", score),
@@ -87,12 +90,31 @@ class Strike(toga.App):
         self.main_window.show()
 
     # Auto action
-    async def action_auto(self, widget):
-        catalog = await self.get_catalog()
-        print(catalog)
+    def action_auto(self, widget):
+        async def ws_recv():
+            async with connect(f"ws://{self.server}/status") as websocket:
+                while True:
+                    msg = await websocket.recv()
+                    print(msg)
+
+                    if msg == "idle":
+                        catalog = await self.get_catalog()
+                        self.touch = len(catalog)
+
+                        await self.update()
+
+                    else:
+                        self.clear()
+
+        if self.ws_task is None or self.ws_task.cancelled():
+            print("Starting WS task")
+            self.ws_task = asyncio.create_task(ws_recv())
 
     # Previous action
     async def action_prev(self, widget):
+        if self.ws_task is not None:
+            self.ws_task.cancel()
+
         catalog = await self.get_catalog()
         if self.touch == 0 or self.touch > len(catalog):
             self.touch = 1
@@ -103,6 +125,9 @@ class Strike(toga.App):
 
     # Next action
     async def action_next(self, widget):
+        if self.ws_task is not None:
+            self.ws_task.cancel()
+
         catalog = await self.get_catalog()
         ntouches = len(catalog)
         if self.touch == 0 or self.touch >= (ntouches - 1):
@@ -138,16 +163,28 @@ class Strike(toga.App):
         self.score = stats.calculate_score(self.rows, self.threshold / 1000)
         self.score_chart.redraw()
 
+        self.line_row = 0
+        self.line_nrows = min(24, len(self.rows))
+        self.line_chart.redraw()
+        self.slider.value = 0
+
         self.rms_errors = stats.calculate_rms_errors(self.sorted_rows)
         self.rms_chart.redraw()
 
         self.faults = stats.calculate_faults(self.sorted_rows, self.threshold / 1000)
         self.faults_chart.redraw()
 
-        self.line_row = 0
-        self.line_nrows = min(24, len(self.rows))
+    # Clear results
+    def clear(self):
+        self.score = None
+        self.rows = []
+        self.rms_errors = None
+        self.faults = None
+
+        self.score_chart.redraw()
         self.line_chart.redraw()
-        self.slider.value = 0
+        self.rms_chart.redraw()
+        self.faults_chart.redraw()
 
     # Overall percent score display
     def score_box(self):
@@ -225,15 +262,16 @@ class Strike(toga.App):
 
     # Overall score chart
     def draw_score_chart(self, chart, figure, *args, **kwargs):
+        ax = figure.add_subplot(1, 1, 1)
+        ax.set_axis_off()
+
         if self.score is None:
             return
 
         score = f"{self.score:.0f}%"
 
         # Hacky method to draw score using matplotlib
-        ax = figure.add_subplot(1, 1, 1)
         text = ax.text(0.5, 0.5, score, ha="center", va="center", fontsize="medium")
-        ax.set_axis_off()
 
         # Gets around an apparant bug with vertical centering
         figure.canvas.draw()
@@ -305,6 +343,8 @@ class Strike(toga.App):
 
     # RMS error chart
     def draw_rms_chart(self, chart, figure, *args, **kwargs):
+        figure.set_layout_engine("constrained")
+
         if self.rms_errors is None:
             return
 
@@ -312,7 +352,6 @@ class Strike(toga.App):
         rms_errors = [rms * 1000 for rms in self.rms_errors]
         colours = [GOLD if error > 50 else TEAL for error in rms_errors]
 
-        figure.set_layout_engine("constrained")
         ax = figure.add_subplot(1, 1, 1)
         ax.bar(range(1, nbells + 1), rms_errors, color=colours)
 
@@ -322,6 +361,8 @@ class Strike(toga.App):
 
     # Faults per bell chart
     def draw_faults_chart(self, chart, figure, *args, **kwargs):
+        figure.set_layout_engine("constrained")
+
         if self.faults is None:
             return
 
@@ -332,12 +373,10 @@ class Strike(toga.App):
         back_early = [-f["back"]["early"] * 100 for f in self.faults]
         back_late = [f["back"]["late"] * 100 for f in self.faults]
 
-        figure.set_layout_engine("constrained")
-        ax = figure.add_subplot(1, 1, 1)
-
         x = np.arange(1, nbells + 1)
         width = 0.35
 
+        ax = figure.add_subplot(1, 1, 1)
         ax.bar(x - width / 2 - 0.01, hand_early, width, label="Hand Early", color=RED)
         ax.bar(x - width / 2 - 0.01, hand_late, width, label="Hand Late", color=PURPLE)
         ax.bar(x + width / 2 + 0.01, back_early, width, label="Back Early", color=GREEN)

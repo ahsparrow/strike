@@ -16,7 +16,7 @@ long_description = """More details about the app should go here.
 sources = ["src/strike"]
 test_sources = ["tests"]
 
-requires = ["httpx", "toga-chart"]
+requires = ["httpx", "toga-chart", "websockets"]
 test_requires = ["pytest"]
 
 [tool.briefcase.app.strike.macOS]
