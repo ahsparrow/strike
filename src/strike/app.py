@@ -262,6 +262,7 @@ class Strike(toga.App):
 
     # Overall score chart
     def draw_score_chart(self, chart, figure, *args, **kwargs):
+        figure.set_layout_engine("constrained")
         ax = figure.add_subplot(1, 1, 1)
         ax.set_axis_off()
 
@@ -292,6 +293,8 @@ class Strike(toga.App):
         text = ax.text(
             0.5, y, score, ha="center", va="bottom", fontsize=fontsize, color=PURPLE
         )
+
+        ax.set_title(f"Touch {self.touch}")
 
     # Blue line chart
     def draw_line_chart(self, chart, figure, *args, **kwargs):
