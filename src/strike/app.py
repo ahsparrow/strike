@@ -173,23 +173,27 @@ class Strike(toga.App):
         catalog = await self.get_catalog()
         ntouches = len(catalog)
 
-        match nav:
-            case "first":
-                self.remote_touch = 1
-            case "last":
-                self.remote_touch = ntouches
-            case "next":
-                if self.remote_touch == 0 or self.remote_touch >= ntouches:
-                    self.remote_touch = ntouches
-                else:
-                    self.remote_touch += 1
-            case "prev":
-                if self.remote_touch == 0 or self.remote_touch == 1:
+        if ntouches == 0:
+            self.remote_touch = 0
+            self.clear()
+        else:
+            match nav:
+                case "first":
                     self.remote_touch = 1
-                else:
-                    self.remote_touch -= 1
+                case "last":
+                    self.remote_touch = ntouches
+                case "next":
+                    if self.remote_touch == 0 or self.remote_touch >= ntouches:
+                        self.remote_touch = ntouches
+                    else:
+                        self.remote_touch += 1
+                case "prev":
+                    if self.remote_touch == 0 or self.remote_touch == 1:
+                        self.remote_touch = 1
+                    else:
+                        self.remote_touch -= 1
 
-        await self.download()
+            await self.download()
 
     # Navigate local touches
     def nav_local(self, nav):
