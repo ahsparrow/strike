@@ -117,13 +117,16 @@ class Strike(toga.App):
     # Auto action
     def action_auto(self, widget):
         async def ws_recv():
-            async with connect(f"ws://{self.server}/status") as websocket:
-                while True:
-                    msg = await websocket.recv()
-                    if msg == "idle":
-                        await self.nav_remote("last")
-                    else:
-                        self.clear()
+            try:
+                async for websocket in connect(f"ws://{self.server}/status"):
+                    while True:
+                        msg = await websocket.recv()
+                        if msg == "idle":
+                            await self.nav_remote("last")
+                        else:
+                            self.clear()
+            except asyncio.CancelledError:
+                await websocket.close()
 
         if self.ws_task is None or self.ws_task.cancelled():
             self.ws_task = asyncio.create_task(ws_recv())
