@@ -84,23 +84,19 @@ class Strike(toga.App):
         # Commands
         cmd_prefs = toga.Command(self.action_prefs, "Preferences", order=4, section=2)
         cmd_auto = toga.Command(self.action_auto, "Auto", order=1, section=1)
+        cmd_first = toga.Command(
+            self.action_nav, "First", id="first", order=2, section=1, shortcut="P"
+        )
         cmd_prev = toga.Command(
-            self.action_nav,
-            "Prev",
-            id="prev",
-            order=2,
-            section=1,
-            shortcut="p",
+            self.action_nav, "Prev", id="prev", order=3, section=1, shortcut="p"
         )
         cmd_next = toga.Command(
-            self.action_nav,
-            "Next",
-            id="next",
-            order=3,
-            section=1,
-            shortcut="n",
+            self.action_nav, "Next", id="next", order=4, section=1, shortcut="n"
         )
-        self.commands.add(cmd_auto, cmd_prev, cmd_next, cmd_prefs)
+        cmd_last = toga.Command(
+            self.action_nav, "Last", id="last", order=5, section=1, shortcut="N"
+        )
+        self.commands.add(cmd_auto, cmd_first, cmd_prev, cmd_next, cmd_last, cmd_prefs)
 
         # TBD replace with platform.system() when upgraded to python 3.13
         if "android" not in platform.platform():
