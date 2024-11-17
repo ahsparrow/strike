@@ -503,7 +503,7 @@ class Strike(toga.App):
             estimates_switch.value = self.show_estimates
             rounds_switch.value = self.include_rounds
 
-        async def on_save(widget):
+        def on_save(widget):
             if (
                 server_input.is_valid
                 and threshold_input.is_valid
@@ -530,7 +530,7 @@ class Strike(toga.App):
                     json.dump(prefs, fp)
 
                 self.main_window.content = self.container
-                await self.update()
+                self.update()
 
         def on_cancel(widget):
             init_prefs()
