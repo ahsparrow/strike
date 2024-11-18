@@ -325,7 +325,9 @@ class Strike(toga.App):
                 zoomin_button,
                 zoomout_button,
             ],
-            style=Pack(direction="row", padding_bottom=10, padding_top=10),
+            style=Pack(
+                direction="row", padding_bottom=10, padding_top=10, alignment="center"
+            ),
         )
 
         return toga.Box(
