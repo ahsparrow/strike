@@ -71,10 +71,10 @@ class Strike(toga.App):
         faults = self.faults_box()
         self.container = toga.OptionContainer(
             content=[
-                ("Score", score),
-                ("Line", line),
-                ("Accuracy", rms),
-                ("Striking", faults),
+                ("Score", score, toga.Icon("resources/score")),
+                ("Line", line, toga.Icon("resources/line")),
+                ("Accuracy", rms, toga.Icon("resources/rms")),
+                ("Striking", faults, toga.Icon("resources/faults")),
             ]
         )
 
