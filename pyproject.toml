@@ -13,6 +13,8 @@ formal_name = "Strike"
 description = "Bell striking statistics"
 long_description = """More details about the app should go here.
 """
+icon = "icons/bell"
+splash_background_color = "#fdfefe"
 sources = ["src/strike"]
 test_sources = ["tests"]
 
