@@ -82,7 +82,7 @@ class Strike(toga.App):
         self.prefs_content = self.prefs_box()
 
         # Commands
-        cmd_prefs = toga.Command(self.action_prefs, "Preferences", order=4, section=2)
+        cmd_prefs = toga.Command(self.action_prefs, "Preferences", order=1, section=2)
         cmd_auto = toga.Command(self.action_auto, "Auto", order=1, section=1)
         cmd_first = toga.Command(
             self.action_nav, "First", id="first", order=2, section=1, shortcut="P"
@@ -108,6 +108,12 @@ class Strike(toga.App):
                 self.action_connect, "Connect", group=toga.Group.APP, order=2
             )
             self.commands.add(cmd_open, cmd_connect)
+        else:
+            # File open for Android
+            cmd_open = toga.Command(
+                self.action_open_android, "Local", order=6, section=1
+            )
+            self.commands.add(cmd_open)
 
         # Top level window
         self.main_window = toga.MainWindow(title=self.formal_name)
@@ -158,7 +164,43 @@ class Strike(toga.App):
         if path:
             self.mode = Mode.LOCAL
             self.local_path = Path(path)
-            self.load_touch(self.local_path)
+            with open(self.local_path) as stream:
+                self.load_touch(stream, self.local_path.name)
+
+    # File open action for Android
+    async def action_open_android(self, widget):
+        from android.content import Intent
+        from java import jarray, jbyte
+
+        # Cancel websocket updates
+        if self.ws_task is not None:
+            self.ws_task.cancel()
+
+        # Show file chooser
+        file_chooser = Intent(Intent.ACTION_GET_CONTENT)
+        file_chooser.addCategory(Intent.CATEGORY_OPENABLE)
+        # text/csv doesn't work
+        file_chooser.setType("*/*")
+
+        results = await self._impl.intent_result(
+            Intent.createChooser(file_chooser, "Choose a touch")
+        )
+        data = results["resultData"].getData()
+        context = self._impl.native
+        stream = context.getContentResolver().openInputStream(data)
+
+        block = jarray(jbyte)(1024 * 1024)
+        blocks = []
+        while True:
+            bytes_read = stream.read(block)
+            if bytes_read == -1:
+                break
+            else:
+                blocks.append(bytes(block)[:bytes_read])
+
+        data = b"".join(blocks)
+        text_stream = io.StringIO(data.decode())
+        self.load_touch(text_stream, "Local")
 
     # Remote data action
     async def action_connect(self, widget):
@@ -213,32 +255,26 @@ class Strike(toga.App):
                     path = paths[n - 1]
 
         self.local_path = path
-        self.load_touch(path)
+        with open(self.local_path) as stream:
+            self.load_touch(stream, self.local_path.name)
 
     # Download touch data
     async def download(self):
         async with httpx.AsyncClient() as client:
             response = await client.get(f"http://{self.server}/log/{self.remote_touch}")
 
-        reader = csv.DictReader(io.StringIO(response.text))
+        self.load_touch(io.StringIO(response.text), f"Touch {self.remote_touch}")
+
+    # Load local touch data
+    def load_touch(self, stream, title):
+        reader = csv.DictReader(stream)
         data = [
             {"bell": int(x["bell"]), "time": int(x["ticks_ms"]) / 1000} for x in reader
         ]
         self.rows = stats.whole_rows(data, self.include_rounds)
 
+        self.title = title
         self.update()
-
-    # Load local touch data
-    def load_touch(self, path):
-        with open(self.local_path, "rt") as csvfile:
-            reader = csv.DictReader(csvfile)
-            data = [
-                {"bell": int(x["bell"]), "time": int(x["ticks_ms"]) / 1000}
-                for x in reader
-            ]
-            self.rows = stats.whole_rows(data, self.include_rounds)
-
-            self.update()
 
     # Update results
     def update(self):
@@ -385,7 +421,7 @@ class Strike(toga.App):
             0.5, y, score, ha="center", va="bottom", fontsize=fontsize, color=PURPLE
         )
 
-        ax.set_title(self.touch_title())
+        ax.set_title(self.title)
 
     # Blue line chart
     def draw_line_chart(self, chart, figure, *args, **kwargs):
@@ -433,7 +469,7 @@ class Strike(toga.App):
                 ]
                 ax.plot(x, offset, "o")
 
-        ax.set_title(self.touch_title())
+        ax.set_title(self.title)
 
     # RMS error chart
     def draw_rms_chart(self, chart, figure, *args, **kwargs):
@@ -449,7 +485,7 @@ class Strike(toga.App):
         ax = figure.add_subplot(1, 1, 1)
         ax.bar(range(1, nbells + 1), rms_errors, color=colours)
 
-        ax.set_title(f"{self.touch_title()} - RMS Accuracy")
+        ax.set_title(f"{self.title} - RMS Accuracy")
         ax.set_ylabel("Time (ms)")
         ax.set_ylim(0, 100)
 
@@ -477,7 +513,7 @@ class Strike(toga.App):
         ax.bar(x + width / 2 + 0.01, back_late, width, label="Back Late", color=BLUE)
         ax.legend(loc="upper right", ncols=2)
         ax.set_title(
-            f"{self.touch_title()} - Early/late percent ({self.threshold:.0f}ms threshold)"
+            f"{self.title} - Early/late percent ({self.threshold:.0f}ms threshold)"
         )
         ax.set_ylabel("Percentage of blows early/late")
         ax.set_ylim(-75, 75)
@@ -631,13 +667,6 @@ class Strike(toga.App):
 
         init_prefs()
         return box
-
-    def touch_title(self):
-        return (
-            f"Touch {self.remote_touch}"
-            if self.mode == Mode.REMOTE
-            else self.local_path.name
-        )
 
     # Get catalog file from CANBell
     async def get_catalog(self):
