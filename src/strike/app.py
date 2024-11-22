@@ -102,10 +102,10 @@ class Strike(toga.App):
         if "android" not in platform.platform():
             # File open for desktop environments
             cmd_open = toga.Command(
-                self.action_open, "Open...", group=toga.Group.APP, order=1
+                self.action_open, "Open...", group=toga.Group.FILE, order=1
             )
             cmd_connect = toga.Command(
-                self.action_connect, "Connect", group=toga.Group.APP, order=2
+                self.action_connect, "Connect", group=toga.Group.FILE, order=2
             )
             self.commands.add(cmd_open, cmd_connect)
         else:
