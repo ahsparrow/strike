@@ -18,7 +18,7 @@ splash_background_color = "#fdfefe"
 sources = ["src/strike"]
 test_sources = ["tests"]
 
-requires = ["httpx", "toga-chart", "websockets"]
+requires = ["httpx", "toga-chart", "websockets", "pandas"]
 test_requires = ["pytest"]
 
 [tool.briefcase.app.strike.macOS]

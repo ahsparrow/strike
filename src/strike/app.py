@@ -52,8 +52,8 @@ class Strike(toga.App):
         self.local_path = None
 
         # Striking results
-        self.rows = []
         self.score = None
+        self.strikes = None
         self.rms_errors = None
         self.faults = None
 
@@ -265,38 +265,37 @@ class Strike(toga.App):
 
         self.load_touch(io.StringIO(response.text), f"Touch {self.remote_touch}")
 
-    # Load local touch data
+    # Load touch data, call after loading new data
     def load_touch(self, stream, title):
-        reader = csv.DictReader(stream)
-        data = [
-            {"bell": int(x["bell"]), "time": int(x["ticks_ms"]) / 1000} for x in reader
-        ]
-        self.rows = stats.whole_rows(data, self.include_rounds)
+        bells, strikes = stats.read_csv(stream)
+
+        self.bells = bells
+        self.strikes = stats.whole_rows(bells, strikes, self.include_rounds)
+        self.nrows = len(self.strikes) / len(self.bells)
+
+        self.line_row = 0
+        self.line_nrows = min(24, len(self.strikes) / len(bells))
+        self.slider.value = 0
 
         self.title = title
         self.update()
 
-    # Update results
+    # Update results, call after loading new touch or changing preferences
     def update(self):
-        if len(self.rows) < 10:
-            return
+        # Update strikes with estimated times
+        stats.alpha_beta(len(self.bells), self.strikes, self.alpha, self.beta)
 
-        stats.alpha_beta(self.rows, self.alpha, self.beta)
-
-        self.sorted_rows = [sorted(row, key=lambda x: x["bell"]) for row in self.rows]
-
-        self.score = stats.calculate_score(self.rows, self.threshold / 1000)
+        self.score = stats.calculate_score(
+            len(self.bells), self.strikes, self.threshold / 1000
+        )
         self.score_chart.redraw()
 
-        self.line_row = 0
-        self.line_nrows = min(24, len(self.rows))
         self.line_chart.redraw()
-        self.slider.value = 0
 
-        self.rms_errors = stats.calculate_rms_errors(self.sorted_rows)
+        self.rms_errors = stats.calculate_rms_errors(self.strikes)
         self.rms_chart.redraw()
 
-        self.faults = stats.calculate_faults(self.sorted_rows, self.threshold / 1000)
+        self.faults = stats.calculate_faults(self.strikes, self.threshold / 1000)
         self.faults_chart.redraw()
 
     # Clear results
@@ -328,17 +327,15 @@ class Strike(toga.App):
                         self.line_nrows = MIN_LINE_ROWS
                 case "out":
                     self.line_nrows = self.line_nrows * 2
-                    self.line_nrows = min(
-                        self.line_nrows, len(self.rows), MAX_LINE_ROWS
-                    )
+                    self.line_nrows = min(self.line_nrows, self.nrows, MAX_LINE_ROWS)
 
-                    if self.line_row + self.line_nrows > len(self.rows):
-                        self.line_row = len(self.rows) - self.line_nrows
+                    if self.line_row + self.line_nrows > self.nrows:
+                        self.line_row = self.nrows - self.line_nrows
 
             self.line_chart.redraw()
 
         def on_scroll(widget):
-            self.line_row = int(widget.value * (len(self.rows) - self.line_nrows))
+            self.line_row = int(widget.value * (self.nrows - self.line_nrows))
             self.line_chart.redraw()
 
         self.line_chart = toga_chart.Chart(
@@ -425,49 +422,40 @@ class Strike(toga.App):
 
     # Blue line chart
     def draw_line_chart(self, chart, figure, *args, **kwargs):
-        if len(self.rows) < MIN_LINE_ROWS:
+        if self.strikes is None:
             return
-
-        nbells = len(self.sorted_rows[0])
-        sorted_rows = self.sorted_rows[self.line_row : self.line_row + self.line_nrows]
-        x = np.arange(self.line_row, self.line_row + self.line_nrows)
 
         figure.set_layout_engine("constrained")
         ax = figure.add_subplot(1, 1, 1)
         ax.autoscale(None, "x", tight=True)
         ax.set_frame_on(False)
         ax.set_yticks([])
-        ax.set_prop_cycle(
-            color=[
-                "black",
-                GOLD,
-                GREEN,
-                BLUE,
-                GRAY,
-                RED,
-            ]
-        )
+        ax.set_prop_cycle(color=["black", GOLD, GREEN, BLUE, GRAY, RED])
 
-        for bell in range(0, nbells):
-            offset = [
-                row[bell]["time"] - min([s["est"] for s in row]) for row in sorted_rows
-            ]
-            marker = f"${bell+1}$" if self.line_nrows <= 50 else ""
+        refs = [
+            row["est"].min()
+            for _, row in self.strikes.groupby(self.strikes.index // len(self.bells))
+        ]
+        x = np.arange(self.line_row, self.line_row + self.line_nrows)
+
+        for bell, strikes in self.strikes.groupby("bell"):
+            offsets = strikes["time"] - refs
+
+            marker = f"${bell}$" if self.line_nrows <= 50 else ""
             ax.plot(
                 x,
-                offset,
+                offsets[self.line_row : self.line_row + self.line_nrows],
                 "-",
                 marker=marker,
                 markersize=15,
             )
 
         if self.show_estimates:
-            for bell in range(0, nbells):
-                offset = [
-                    row[bell]["est"] - min([s["est"] for s in row])
-                    for row in sorted_rows
-                ]
-                ax.plot(x, offset, "o")
+            for bell, strikes in self.strikes.groupby("bell"):
+                offsets = strikes["est"] - refs
+                ax.plot(
+                    x, offsets[self.line_row : self.line_row + self.line_nrows], "o"
+                )
 
         ax.set_title(self.title)
 
@@ -498,10 +486,10 @@ class Strike(toga.App):
 
         nbells = len(self.faults)
 
-        hand_early = [-f["hand"]["early"] * 100 for f in self.faults]
-        hand_late = [f["hand"]["late"] * 100 for f in self.faults]
-        back_early = [-f["back"]["early"] * 100 for f in self.faults]
-        back_late = [f["back"]["late"] * 100 for f in self.faults]
+        hand_early = [-f["hand"]["early"] / self.nrows * 100 for f in self.faults]
+        hand_late = [f["hand"]["late"] / self.nrows * 100 for f in self.faults]
+        back_early = [-f["back"]["early"] / self.nrows * 100 for f in self.faults]
+        back_late = [f["back"]["late"] / self.nrows * 100 for f in self.faults]
 
         x = np.arange(1, nbells + 1)
         width = 0.35

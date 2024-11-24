@@ -1,130 +1,127 @@
-import itertools
-import math
+import numpy as np
+import pandas as pd
+
+pd.options.mode.copy_on_write = True
 
 
-# Get whole rows, discard any strikes after an incomplete row
-def whole_rows(strikes, include_rounds=True):
-    # Sort strikes in time order
-    strikes.sort(key=lambda s: s["time"])
+# Converts CSV data stream to data frame
+def read_csv(stream):
+    strikes = pd.read_csv(stream)
 
-    # Get the number of bells
-    nbells = len(set([s["bell"] for s in strikes]))
+    # Ensure strikes are in ascending time order
+    strikes.sort_values("ticks_ms", inplace=True)
+    strikes.reset_index()
 
-    # Split into rows
-    iterators = [iter(strikes)] * nbells
-    rows = zip(*iterators)
+    # Convert milliseconds to seconds
+    strikes["time"] = strikes["ticks_ms"] / 1000
 
-    # Terminate after any incomplete row
-    rows = list(
-        itertools.takewhile(
-            lambda row: len(set(x["bell"] for x in row)) == nbells, rows
-        )
-    )
+    # Array of bells
+    bells = np.sort(strikes["bell"].unique())
 
+    return bells, strikes
+
+
+# Get whole rows, discard strikes following an incomplete row
+def whole_rows(bells, strikes, include_rounds=True):
+    nbells = len(bells)
     if nbells < 3:
-        return []
+        return strikes[0:0]
+
+    # Drop data following an incomplete row
+    for i, group in strikes.groupby(strikes.index // nbells):
+        if group["bell"].nunique() != nbells:
+            break
+    strikes = strikes[: i * nbells]
 
     if not include_rounds:
-        rounds = list(range(1, nbells + 1))
-        # Discard rounds at start
-        while True:
-            if len(rows) >= 3 and list([s["bell"] for s in rows[2]]) == rounds:
-                # Discard two rows at a time, so result starts at handstroke
-                rows.pop(0)
-                rows.pop(0)
-            else:
+        # First non-round row
+        for first, group in strikes.groupby(strikes.index // nbells):
+            if not (group["bell"] == bells).all():
                 break
 
-        # Discard rounds at end
-        while True:
-            if len(rows) >= 2 and list([s["bell"] for s in rows[-2]]) == rounds:
-                rows.pop()
-            else:
+        # Last non-round row
+        for last, group in strikes.groupby((strikes.index // nbells)[::-1]):
+            if not (group["bell"] == bells).all():
                 break
 
-        if len(rows) < 2:
-            return []
+        # Start with handstroke and at least one row of rounds
+        i1 = max(((first - 1) // 2) * 2 * nbells, 0)
 
-    return rows
+        # End with one row of rounds
+        i2 = len(strikes) - (last - 1) * nbells
+
+        strikes = strikes[i1:i2]
+
+    if len(strikes.index) < 2:
+        return strikes[0:0]
+
+    strikes.reset_index()
+    return strikes
 
 
 # Alpha Beta filter (see https://en.wikipedia.org/wiki/Alpha_beta_filter)
-def alpha_beta(rows, alpha=0.4, beta=0.1):
-    strikes = list(itertools.chain(*rows))
-    nbells = len(rows[0])
+def alpha_beta(nbells, strikes, alpha=0.4, beta=0.1):
+    if len(strikes) == 0:
+        return strikes
+
+    times = strikes["time"].values
+    ests = []
 
     # Intitial state estimates, tk is the strike time, dk is the time between strikes
-    tk_1 = strikes[0]["time"]
-    dk_1 = (strikes[-1]["time"] - tk_1) / (len(strikes) - 1) * nbells / (nbells + 0.5)
-    strikes[0]["est"] = tk_1
+    tk_1 = times[0]
+    dk_1 = (times[-1] - tk_1) / (len(times) - 1) * nbells / (nbells + 0.5)
+    ests.append(tk_1)
 
-    for n, strike in enumerate(strikes[1:], start=1):
+    for n, time in enumerate(times[1:], start=1):
         gap = 2 if n % (nbells * 2) == 0 else 1
 
         tk = tk_1 + dk_1 * gap
-        dk = dk_1
+        rk = time - tk
 
-        rk = strike["time"] - tk
+        tk_1 = tk + alpha * rk
+        dk_1 += beta * rk
 
-        tk += alpha * rk
-        dk += beta * rk
+        ests.append(tk_1)
 
-        tk_1 = tk
-        dk_1 = dk
-
-        strike["est"] = tk
+    strikes["est"] = ests
+    strikes["err"] = strikes["time"] - ests
 
 
 # Calcuate overall percentage score
-def calculate_score(rows, threshold=0.05):
+def calculate_score(nbells, strikes, threshold=0.05):
+    if len(strikes) == 0:
+        return 0
+
     score = 0
-    for row in rows:
-        max_error = max([abs(bell["est"] - bell["time"]) for bell in row])
+    for _, row in strikes.groupby(strikes.index // nbells):
+        max_error = np.fabs(row["err"]).max()
         if max_error < threshold:
             score += 1
 
-    return 100 * score / len(rows)
+    return 100 * score / (len(strikes) / nbells)
 
 
 # Calculate RMS error for all bells
-def calculate_rms_errors(sorted_rows):
-    nbells = len(sorted_rows[0])
-    nrows = len(sorted_rows)
+def calculate_rms_errors(strikes):
+    return [np.sqrt(np.mean(s["err"] ** 2)) for _, s in strikes.groupby("bell")]
 
+
+def calculate_faults(strikes, threshold=0.05):
     out = []
-    for bell in range(nbells):
-        squares = 0
-        for row in sorted_rows:
-            squares += (row[bell]["est"] - row[bell]["time"]) ** 2
+    for _, s in strikes.groupby("bell"):
+        hand = s[::2]
+        h_late = (hand["err"] > threshold).sum()
+        h_early = (hand["err"] < -threshold).sum()
 
-        rms = math.sqrt(squares / nrows)
-        out.append(rms)
+        back = s[1::2]
+        b_late = (back["err"] > threshold).sum()
+        b_early = (back["err"] < -threshold).sum()
 
-    return out
-
-
-def calculate_faults(sorted_rows, threshold=0.05):
-    def count_faults(strikes):
-        early_error = 0
-        late_error = 0
-        for strike in strikes:
-            err = strike["time"] - strike["est"]
-            if abs(err) > threshold:
-                if err > 0:
-                    late_error += 1
-                else:
-                    early_error += 1
-
-        nstrikes = len(strikes)
-        return {"early": early_error / nstrikes, "late": late_error / nstrikes}
-
-    nbells = len(sorted_rows[0])
-
-    out = []
-    for bell in range(nbells):
-        hand = count_faults([row[bell] for row in sorted_rows[::2]])
-        back = count_faults([row[bell] for row in sorted_rows[1::2]])
-
-        out.append({"hand": hand, "back": back})
+        out.append(
+            {
+                "hand": {"early": h_early, "late": h_late},
+                "back": {"early": b_early, "late": b_late},
+            }
+        )
 
     return out
