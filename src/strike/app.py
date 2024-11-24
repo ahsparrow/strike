@@ -12,10 +12,10 @@ from enum import Enum
 from pathlib import Path
 
 import httpx
+import matplotlib.ticker as ticker
 import numpy as np
 import toga
 import toga_chart
-from matplotlib.ticker import FuncFormatter
 from toga.style.pack import Pack
 from toga.validators import Integer, LengthBetween, Number
 from websockets.asyncio.client import connect
@@ -430,7 +430,9 @@ class Strike(toga.App):
         ax.autoscale(None, "x", tight=True)
         ax.set_frame_on(False)
         ax.set_yticks([])
-        ax.set_prop_cycle(color=["black", GOLD, GREEN, BLUE, GRAY, RED])
+        ax.set_prop_cycle(color=["black", GOLD, GREEN, BLUE, GRAY, RED, PURPLE, TEAL])
+        # Integer only xaxis labels
+        ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 
         refs = [
             row["est"].min()
@@ -505,7 +507,9 @@ class Strike(toga.App):
         )
         ax.set_ylabel("Percentage of blows early/late")
         ax.set_ylim(-75, 75)
-        ax.yaxis.set_major_formatter(FuncFormatter(lambda x, pos: str(int(abs(x)))))
+        ax.yaxis.set_major_formatter(
+            ticker.FuncFormatter(lambda x, pos: str(int(abs(x))))
+        )
 
     # Load stored preferences
     def load_prefs(self):
