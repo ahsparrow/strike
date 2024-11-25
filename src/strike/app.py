@@ -271,10 +271,10 @@ class Strike(toga.App):
 
         self.bells = bells
         self.strikes = stats.whole_rows(bells, strikes, self.include_rounds)
-        self.nrows = len(self.strikes) / len(self.bells)
+        self.nrows = len(self.strikes) // len(self.bells)
 
         self.line_row = 0
-        self.line_nrows = min(24, len(self.strikes) / len(bells))
+        self.line_nrows = min(24, len(self.strikes) // len(bells))
         self.slider.value = 0
 
         self.title = title
@@ -322,15 +322,19 @@ class Strike(toga.App):
         def on_zoom(widget):
             match widget.id:
                 case "in":
-                    self.line_nrows = self.line_nrows // 2
-                    if self.line_nrows < MIN_LINE_ROWS:
-                        self.line_nrows = MIN_LINE_ROWS
+                    self.line_nrows = int(self.line_nrows // 1.5)
+                    self.line_nrows = max(MIN_LINE_ROWS, self.line_nrows)
                 case "out":
-                    self.line_nrows = self.line_nrows * 2
-                    self.line_nrows = min(self.line_nrows, self.nrows, MAX_LINE_ROWS)
+                    self.line_nrows = int(self.line_nrows * 1.5)
+                    self.line_nrows = min(MAX_LINE_ROWS, self.nrows, self.line_nrows)
 
                     if self.line_row + self.line_nrows > self.nrows:
                         self.line_row = self.nrows - self.line_nrows
+
+            if self.line_nrows == self.nrows:
+                self.slider.value = 0
+            else:
+                self.slider.value = self.line_row / (self.nrows - self.line_nrows)
 
             self.line_chart.redraw()
 
@@ -422,7 +426,7 @@ class Strike(toga.App):
 
     # Blue line chart
     def draw_line_chart(self, chart, figure, *args, **kwargs):
-        if self.strikes is None:
+        if self.strikes is None or len(self.strikes) < MIN_LINE_ROWS * len(self.bells):
             return
 
         figure.set_layout_engine("constrained")
