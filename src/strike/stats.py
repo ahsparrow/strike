@@ -22,7 +22,7 @@ def read_csv(stream):
 
 
 # Get whole rows, discard strikes following an incomplete row
-def whole_rows(bells, strikes, include_rounds=True):
+def whole_rows(bells, strikes):
     nbells = len(bells)
     if nbells < 3:
         return strikes[0:0]
@@ -33,30 +33,23 @@ def whole_rows(bells, strikes, include_rounds=True):
             break
     strikes = strikes[: i * nbells]
 
-    if not include_rounds:
-        # First non-round row
-        for first, group in strikes.groupby(strikes.index // nbells):
-            if not (group["bell"] == bells).all():
-                break
-
-        # Last non-round row
-        for last, group in strikes.groupby((strikes.index // nbells)[::-1]):
-            if not (group["bell"] == bells).all():
-                break
-
-        # Start with handstroke and at least one row of rounds
-        i1 = max(((first - 1) // 2) * 2 * nbells, 0)
-
-        # End with one row of rounds
-        i2 = len(strikes) - (last - 1) * nbells
-
-        strikes = strikes[i1:i2]
-
-    if len(strikes.index) < 2:
-        return strikes[0:0]
-
-    strikes.reset_index()
     return strikes
+
+
+# Find method start and stop rows
+def method_start_stop(bells, strikes):
+    nbells = len(bells)
+    for first, group in strikes.groupby(strikes.index // nbells):
+        if (group["bell"] != bells).any():
+            break
+    first_row = max(((first - 1) // 2) * 2, 0)
+
+    for last, group in strikes.groupby((strikes.index // nbells)[::-1]):
+        if (group["bell"] != bells).any():
+            break
+    last_row = len(strikes) // nbells - last + 1
+
+    return first_row, last_row
 
 
 # Alpha Beta filter (see https://en.wikipedia.org/wiki/Alpha_beta_filter)
@@ -110,12 +103,12 @@ def calculate_faults(strikes, threshold=0.05):
     out = []
     for _, s in strikes.groupby("bell"):
         hand = s[::2]
-        h_late = (hand["err"] > threshold).sum()
-        h_early = (hand["err"] < -threshold).sum()
+        h_late = (hand["err"] > threshold).sum() / len(hand) * 100
+        h_early = (hand["err"] < -threshold).sum() / len(hand) * 100
 
         back = s[1::2]
-        b_late = (back["err"] > threshold).sum()
-        b_early = (back["err"] < -threshold).sum()
+        b_late = (back["err"] > threshold).sum() / len(back) * 100
+        b_early = (back["err"] < -threshold).sum() / len(back) * 100
 
         out.append(
             {

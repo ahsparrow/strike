@@ -269,9 +269,14 @@ class Strike(toga.App):
     def load_touch(self, stream, title):
         bells, strikes = stats.read_csv(stream)
 
+        # Check for incomplete rows
+        self.strikes = stats.whole_rows(bells, strikes)
+
         self.bells = bells
-        self.strikes = stats.whole_rows(bells, strikes, self.include_rounds)
         self.nrows = len(self.strikes) // len(self.bells)
+
+        # Method start and stop
+        self.first_row, self.last_row = stats.method_start_stop(bells, self.strikes)
 
         self.line_row = 0
         self.line_nrows = min(24, len(self.strikes) // len(bells))
@@ -285,17 +290,25 @@ class Strike(toga.App):
         # Update strikes with estimated times
         stats.alpha_beta(len(self.bells), self.strikes, self.alpha, self.beta)
 
+        # Exclude or include start and end rounds from scoring
+        if not self.include_rounds:
+            score_strikes = self.strikes[
+                self.first_row * len(self.bells) : self.last_row * len(self.bells)
+            ]
+        else:
+            score_strikes = self.strikes
+
         self.score = stats.calculate_score(
-            len(self.bells), self.strikes, self.threshold / 1000
+            len(self.bells), score_strikes, self.threshold / 1000
         )
         self.score_chart.redraw()
 
         self.line_chart.redraw()
 
-        self.rms_errors = stats.calculate_rms_errors(self.strikes)
+        self.rms_errors = stats.calculate_rms_errors(score_strikes)
         self.rms_chart.redraw()
 
-        self.faults = stats.calculate_faults(self.strikes, self.threshold / 1000)
+        self.faults = stats.calculate_faults(score_strikes, self.threshold / 1000)
         self.faults_chart.redraw()
 
     # Clear results
@@ -492,10 +505,10 @@ class Strike(toga.App):
 
         nbells = len(self.faults)
 
-        hand_early = [-f["hand"]["early"] / self.nrows * 100 for f in self.faults]
-        hand_late = [f["hand"]["late"] / self.nrows * 100 for f in self.faults]
-        back_early = [-f["back"]["early"] / self.nrows * 100 for f in self.faults]
-        back_late = [f["back"]["late"] / self.nrows * 100 for f in self.faults]
+        hand_early = [-f["hand"]["early"] for f in self.faults]
+        hand_late = [f["hand"]["late"] for f in self.faults]
+        back_early = [-f["back"]["early"] for f in self.faults]
+        back_late = [f["back"]["late"] for f in self.faults]
 
         x = np.arange(1, nbells + 1)
         width = 0.35
