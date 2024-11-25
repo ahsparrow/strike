@@ -442,12 +442,14 @@ class Strike(toga.App):
         if self.strikes is None or len(self.strikes) < MIN_LINE_ROWS * len(self.bells):
             return
 
+        color = ["black", GOLD, GREEN, BLUE, GRAY, RED, PURPLE, TEAL]
+
         figure.set_layout_engine("constrained")
         ax = figure.add_subplot(1, 1, 1)
         ax.autoscale(None, "x", tight=True)
         ax.set_frame_on(False)
         ax.set_yticks([])
-        ax.set_prop_cycle(color=["black", GOLD, GREEN, BLUE, GRAY, RED, PURPLE, TEAL])
+        ax.set_prop_cycle(color=color)
         # Integer only xaxis labels
         ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 
@@ -470,6 +472,7 @@ class Strike(toga.App):
             )
 
         if self.show_estimates:
+            ax.set_prop_cycle(color=color)
             for bell, strikes in self.strikes.groupby("bell"):
                 offsets = strikes["est"] - refs
                 ax.plot(
