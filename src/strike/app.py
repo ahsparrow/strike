@@ -328,9 +328,14 @@ class Strike(toga.App):
     # Overall percent score display
     def score_box(self):
         self.score_canvas = toga.Canvas(style=Pack(flex=1), on_resize=self.on_resize)
-        font = toga.Font(family="sans-serif", size=100)
+        font = toga.Font("sans-serif", 100)
         with self.score_canvas.Fill(color=PURPLE) as text_filler:
             self.score_text = text_filler.write_text(" ", 100, 100, font)
+
+        with self.score_canvas.Fill(color="black") as text_filler:
+            self.score_title = text_filler.write_text(
+                " ", 100, 100, toga.Font("sans-serif", 15)
+            )
 
         return toga.Box(children=[self.score_canvas])
 
@@ -412,12 +417,18 @@ class Strike(toga.App):
 
     # Update score text size
     def resize_canvas(self, canvas, width, height):
+        # Need this for Android, don't know why
+        if width == 0 or height == 0:
+            return
+
+        # Center score horizontal and vertical
         text_width, text_height = canvas.measure_text(
             self.score_text.text, self.score_text.font
         )
+        # 0.6 is a bodge to convert line height to actual text height
         text_height = text_height * 0.6
 
-        scale = min(height / text_height, width / text_width) * 0.9
+        scale = min(height / text_height, width / text_width) * 0.85
 
         self.score_text.font = toga.Font(
             family="sans-serif", size=self.score_text.font.size * scale
@@ -425,12 +436,17 @@ class Strike(toga.App):
         self.score_text.x = (width - text_width * scale) / 2
         self.score_text.y = (height + text_height * scale) / 2
 
+        # Place title top, centre
+        title_width, title_height = canvas.measure_text(
+            self.score_title.text, self.score_title.font
+        )
+        self.score_title.x = (width - title_width) / 2
+        self.score_title.y = title_height
+
     # Update score text
     def redraw_score(self):
-        if self.score is not None:
-            self.score_text.text = f"{self.score:.0f}%"
-        else:
-            self.score_text.text = " "
+        self.score_text.text = f"{self.score:.0f}%" if self.score is not None else " "
+        self.score_title.text = self.title
 
         self.score_canvas.redraw()
         self.resize_canvas(
