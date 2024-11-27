@@ -301,7 +301,8 @@ class Strike(toga.App):
         self.score = stats.calculate_score(
             len(self.bells), score_strikes, self.threshold / 1000
         )
-        self.score_chart.redraw()
+        # self.score_chart.redraw()
+        self.redraw_score()
 
         self.line_chart.redraw()
 
@@ -318,17 +319,20 @@ class Strike(toga.App):
         self.rms_errors = None
         self.faults = None
 
-        self.score_chart.redraw()
+        # self.score_chart.redraw()
+        self.redraw_score()
         self.line_chart.redraw()
         self.rms_chart.redraw()
         self.faults_chart.redraw()
 
     # Overall percent score display
     def score_box(self):
-        self.score_chart = toga_chart.Chart(
-            style=Pack(flex=1), on_draw=self.draw_score_chart
-        )
-        return toga.Box(children=[self.score_chart])
+        self.score_canvas = toga.Canvas(style=Pack(flex=1), on_resize=self.on_resize)
+        font = toga.Font(family="sans-serif", size=100)
+        with self.score_canvas.Fill(color=PURPLE) as text_filler:
+            self.score_text = text_filler.write_text(" ", 100, 100, font)
+
+        return toga.Box(children=[self.score_canvas])
 
     # Blue line display
     def line_box(self):
@@ -401,41 +405,39 @@ class Strike(toga.App):
         )
         return toga.Box(children=[self.faults_chart])
 
-    # Overall score chart
-    def draw_score_chart(self, chart, figure, *args, **kwargs):
-        figure.set_layout_engine("constrained")
-        ax = figure.add_subplot(1, 1, 1)
-        ax.set_axis_off()
+    # Resize score canvas
+    def on_resize(self, canvas, width, height, **kwargs):
+        if canvas.context:
+            self.resize_canvas(canvas, width, height)
 
-        if self.score is None:
-            return
-
-        score = f"{self.score:.0f}%"
-
-        # Hacky method to draw score using matplotlib
-        text = ax.text(0.5, 0.5, score, ha="center", va="center", fontsize="medium")
-
-        # Gets around an apparant bug with vertical centering
-        figure.canvas.draw()
-        figwidth = figure.get_figwidth() * figure.dpi
-        figheight = figure.get_figheight() * figure.dpi
-
-        bbox = text.get_window_extent()
-        textwidth = bbox.x1 - bbox.x0
-        textheight = bbox.y1 - bbox.y0
-
-        hscale = figwidth / textwidth
-        vscale = figheight / textheight
-        scale = min(hscale, vscale) * 0.9
-        fontsize = scale * text.get_fontsize()
-
-        text.remove()
-        y = 0.5 - scale * textheight / (2 * figheight)
-        text = ax.text(
-            0.5, y, score, ha="center", va="bottom", fontsize=fontsize, color=PURPLE
+    # Update score text size
+    def resize_canvas(self, canvas, width, height):
+        text_width, text_height = canvas.measure_text(
+            self.score_text.text, self.score_text.font
         )
+        text_height = text_height * 0.6
 
-        ax.set_title(self.title)
+        scale = min(height / text_height, width / text_width) * 0.9
+
+        self.score_text.font = toga.Font(
+            family="sans-serif", size=self.score_text.font.size * scale
+        )
+        self.score_text.x = (width - text_width * scale) / 2
+        self.score_text.y = (height + text_height * scale) / 2
+
+    # Update score text
+    def redraw_score(self):
+        if self.score is not None:
+            self.score_text.text = f"{self.score:.0f}%"
+        else:
+            self.score_text.text = " "
+
+        self.score_canvas.redraw()
+        self.resize_canvas(
+            self.score_canvas,
+            self.score_canvas.layout.content_width,
+            self.score_canvas.layout.content_height,
+        )
 
     # Blue line chart
     def draw_line_chart(self, chart, figure, *args, **kwargs):
