@@ -282,7 +282,7 @@ class Strike(toga.App):
         self.line_nrows = min(24, len(self.strikes) // len(bells))
         self.slider.value = 0
 
-        self.title = title
+        self.main_window.title = title
         self.update()
 
     # Update results, call after loading new touch or changing preferences
@@ -319,11 +319,12 @@ class Strike(toga.App):
         self.rms_errors = None
         self.faults = None
 
-        # self.score_chart.redraw()
         self.redraw_score()
         self.line_chart.redraw()
         self.rms_chart.redraw()
         self.faults_chart.redraw()
+
+        self.main_window.title = self.formal_name
 
     # Overall percent score display
     def score_box(self):
@@ -446,7 +447,6 @@ class Strike(toga.App):
     # Update score text
     def redraw_score(self):
         self.score_text.text = f"{self.score:.0f}%" if self.score is not None else " "
-        self.score_title.text = self.title
 
         self.score_canvas.redraw()
         self.resize_canvas(
@@ -497,8 +497,6 @@ class Strike(toga.App):
                     x, offsets[self.line_row : self.line_row + self.line_nrows], "o"
                 )
 
-        ax.set_title(self.title)
-
     # RMS error chart
     def draw_rms_chart(self, chart, figure, *args, **kwargs):
         figure.set_layout_engine("constrained")
@@ -513,7 +511,7 @@ class Strike(toga.App):
         ax = figure.add_subplot(1, 1, 1)
         ax.bar(range(1, nbells + 1), rms_errors, color=colours)
 
-        ax.set_title(f"{self.title} - RMS Accuracy")
+        ax.set_title("RMS Accuracy")
         ax.set_ylabel("Time (ms)")
         ax.set_ylim(0, 100)
 
@@ -540,9 +538,7 @@ class Strike(toga.App):
         ax.bar(x + width / 2 + 0.01, back_early, width, label="Back Early", color=GREEN)
         ax.bar(x + width / 2 + 0.01, back_late, width, label="Back Late", color=BLUE)
         ax.legend(loc="upper right", ncols=2)
-        ax.set_title(
-            f"{self.title} - Early/late percent ({self.threshold:.0f}ms threshold)"
-        )
+        ax.set_title(f"Early/late percent ({self.threshold:.0f}ms threshold)")
         ax.set_ylabel("Percentage of blows early/late")
         ax.set_ylim(-75, 75)
         ax.yaxis.set_major_formatter(
