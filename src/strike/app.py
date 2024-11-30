@@ -509,7 +509,7 @@ class Strike(toga.App):
         colours = [GOLD if error > 50 else TEAL for error in rms_errors]
 
         ax = figure.add_subplot(1, 1, 1)
-        ax.bar(range(1, nbells + 1), rms_errors, color=colours)
+        ax.bar(range(1, nbells + 1), rms_errors, color=colours, tick_label=self.bells)
 
         ax.set_title("RMS Accuracy")
         ax.set_ylabel("Time (ms)")
@@ -533,7 +533,14 @@ class Strike(toga.App):
         width = 0.35
 
         ax = figure.add_subplot(1, 1, 1)
-        ax.bar(x - width / 2 - 0.01, hand_early, width, label="Hand Early", color=RED)
+        ax.bar(
+            x - width / 2 - 0.01,
+            hand_early,
+            width,
+            label="Hand Early",
+            color=RED,
+            tick_label=self.bells,
+        )
         ax.bar(x - width / 2 - 0.01, hand_late, width, label="Hand Late", color=PURPLE)
         ax.bar(x + width / 2 + 0.01, back_early, width, label="Back Early", color=GREEN)
         ax.bar(x + width / 2 + 0.01, back_late, width, label="Back Late", color=BLUE)
