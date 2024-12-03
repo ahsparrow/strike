@@ -62,7 +62,7 @@ def alpha_beta(nbells, strikes, alpha=0.4, beta=0.1):
 
     # Intitial state estimates, tk is the strike time, dk is the time between strikes
     tk_1 = times[0]
-    dk_1 = (times[-1] - tk_1) / (len(times) - 1) * nbells / (nbells + 0.5)
+    dk_1 = (times[-1] - tk_1) / (len(times) + len(times) / (2 * nbells) - 2)
     ests.append(tk_1)
 
     for n, time in enumerate(times[1:], start=1):
