@@ -61,6 +61,33 @@ class MyHomePage extends StatelessWidget {
           Center(child: Text('RMS')),
           Center(child: Text('Accuracy')),
         ]),
+        bottomNavigationBar: BottomAppBar(
+          child: Row(
+            children: [
+              const Spacer(flex: 1),
+              IconButton(
+                icon: const Icon(Icons.first_page),
+                onPressed: () {},
+              ),
+              const SizedBox(width: 24),
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () {},
+              ),
+              const SizedBox(width: 24),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () {},
+              ),
+              const SizedBox(width: 24),
+              IconButton(
+                icon: const Icon(Icons.last_page),
+                onPressed: () {},
+              ),
+              const Spacer(flex: 1),
+            ],
+          ),
+        ),
       ),
     );
   }
