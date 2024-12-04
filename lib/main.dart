@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'data.dart';
+import 'widgets/line.dart';
+import 'widgets/score.dart';
+import 'widgets/rms.dart';
+import 'widgets/accuracy.dart';
 
 void main() {
   runApp(
@@ -63,17 +67,11 @@ class MyHomePage extends StatelessWidget {
             ],
           ),
         ),
-        body: TabBarView(children: [
-          Center(
-            child: Consumer<StrikeData>(
-              builder: (context, strikeData, child) => Text(
-                '${strikeData.value}',
-              ),
-            ),
-          ),
-          const Center(child: Text('Line')),
-          const Center(child: Text('RMS')),
-          const Center(child: Text('Accuracy')),
+        body: const TabBarView(children: [
+          ScoreWidget(),
+          LineWidget(),
+          RmsWidget(),
+          AccuracyWidget(),
         ]),
         bottomNavigationBar: BottomAppBar(
           child: Row(
