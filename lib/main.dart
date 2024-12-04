@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'data.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => StrikeData(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -55,11 +63,17 @@ class MyHomePage extends StatelessWidget {
             ],
           ),
         ),
-        body: const TabBarView(children: [
-          Center(child: Text('Score')),
-          Center(child: Text('Line')),
-          Center(child: Text('RMS')),
-          Center(child: Text('Accuracy')),
+        body: TabBarView(children: [
+          Center(
+            child: Consumer<StrikeData>(
+              builder: (context, strikeData, child) => Text(
+                '${strikeData.value}',
+              ),
+            ),
+          ),
+          const Center(child: Text('Line')),
+          const Center(child: Text('RMS')),
+          const Center(child: Text('Accuracy')),
         ]),
         bottomNavigationBar: BottomAppBar(
           child: Row(
@@ -72,12 +86,18 @@ class MyHomePage extends StatelessWidget {
               const SizedBox(width: 24),
               IconButton(
                 icon: const Icon(Icons.chevron_left),
-                onPressed: () {},
+                onPressed: () async {
+                  var strikeData = context.read<StrikeData>();
+                  strikeData.decrement();
+                },
               ),
               const SizedBox(width: 24),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
-                onPressed: () {},
+                onPressed: () async {
+                  var strikeData = context.read<StrikeData>();
+                  strikeData.increment();
+                },
               ),
               const SizedBox(width: 24),
               IconButton(
