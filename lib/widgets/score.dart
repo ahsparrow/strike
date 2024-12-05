@@ -11,7 +11,7 @@ class ScoreWidget extends StatelessWidget {
     return Center(
       child: Consumer<StrikeData>(
         builder: (context, strikeData, child) => Text(
-          '${strikeData.value}',
+          '${strikeData.touchNum}',
         ),
       ),
     );

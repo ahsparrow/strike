@@ -79,14 +79,17 @@ class MyHomePage extends StatelessWidget {
               const Spacer(flex: 1),
               IconButton(
                 icon: const Icon(Icons.first_page),
-                onPressed: () {},
+                onPressed: () async {
+                  var strikeData = context.read<StrikeData>();
+                  strikeData.getFirst();
+                },
               ),
               const SizedBox(width: 24),
               IconButton(
                 icon: const Icon(Icons.chevron_left),
                 onPressed: () async {
                   var strikeData = context.read<StrikeData>();
-                  strikeData.decrement();
+                  strikeData.getPrev();
                 },
               ),
               const SizedBox(width: 24),
@@ -94,13 +97,16 @@ class MyHomePage extends StatelessWidget {
                 icon: const Icon(Icons.chevron_right),
                 onPressed: () async {
                   var strikeData = context.read<StrikeData>();
-                  strikeData.increment();
+                  strikeData.getNext();
                 },
               ),
               const SizedBox(width: 24),
               IconButton(
                 icon: const Icon(Icons.last_page),
-                onPressed: () {},
+                onPressed: () async {
+                  var strikeData = context.read<StrikeData>();
+                  strikeData.getLast();
+                },
               ),
               const Spacer(flex: 1),
             ],
