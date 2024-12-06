@@ -2,15 +2,24 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import 'utils/stats.dart';
+
 class StrikeData with ChangeNotifier {
-  String host = 'localhost';
-  int port = 5000;
+  var host = 'localhost';
+  var port = 5000;
+
+  var alpha = 0.4;
+  var beta = 0.1;
 
   int touchNum = 0;
-  List<List<int>> strikeData = [];
+  List<Strike> strikeData = [];
+
+  List<List<int>> lines = [];
+  List<List<int>> ests = [];
 
   void getFirst() async {
     final numTouches = await getNumTouches();
@@ -46,6 +55,8 @@ class StrikeData with ChangeNotifier {
     strikeData = await getTouchData(num);
     if (strikeData.isNotEmpty) {
       touchNum = num;
+      calculate();
+
       notifyListeners();
     }
   }
@@ -59,17 +70,55 @@ class StrikeData with ChangeNotifier {
   }
 
   // Get touch data from the server
-  Future<List<List<int>>> getTouchData(int touchNum) async {
+  Future<List<Strike>> getTouchData(int touchNum) async {
     final uri =
         Uri(scheme: 'http', host: host, port: port, path: 'log/$touchNum');
     final response = await http.get(uri);
 
     if (response.statusCode == 200) {
       return [
-        for (var x in jsonDecode(response.body) as List) List<int>.from(x)
+        for (var x in jsonDecode(response.body) as List) Strike(x[0], x[1])
       ];
     } else {
       return [];
     }
+  }
+
+  // Calculate resutls
+  calculate() {
+    final bells = getBells(strikeData);
+    final strikes = getWholeRows(bells, strikeData);
+    final estStrikes = alphaBeta(bells.length, strikes, alpha, beta);
+
+    final rows = strikes.slices(bells.length);
+    final sortedRows = [
+      for (final r in rows) r.sorted((a, b) => a.bell.compareTo(b.bell))
+    ];
+
+    final estRows = estStrikes.slices(bells.length);
+    final sortedEstRows = [
+      for (final r in estRows) r.sorted((a, b) => a.bell.compareTo(b.bell))
+    ];
+
+    final refs = [for (final r in estRows) r[0].time];
+
+    List<List<int>> lines = [];
+    List<List<int>> ests = [];
+    for (var n = 0; n < bells.length; n++) {
+      var times = [for (final x in sortedRows) x[n].time];
+      var line = [
+        for (final pair in IterableZip([times, refs])) pair[0] - pair[1]
+      ];
+      lines.add(line);
+
+      times = [for (final x in sortedEstRows) x[n].time];
+      var est = [
+        for (final pair in IterableZip([times, refs])) pair[0] - pair[1]
+      ];
+      ests.add(est);
+    }
+
+    this.lines = lines;
+    this.ests = ests;
   }
 }
