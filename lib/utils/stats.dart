@@ -2,7 +2,7 @@ import 'package:collection/collection.dart';
 
 class Strike {
   int bell;
-  int time;
+  double time;
 
   Strike(this.bell, this.time);
 }
@@ -39,7 +39,7 @@ List<Strike> alphaBeta(
   var dk_1 =
       (times.last - tk_1) / (times.length + times.length / (2 * nbells) - 2);
 
-  var ests = [Strike(strikes[0].bell, tk_1.round())];
+  var ests = [Strike(strikes[0].bell, tk_1)];
 
   for (final (n, time) in times.slice(1).indexed) {
     var gap = ((n + 1) % (nbells * 2) == 0) ? 2 : 1;
@@ -50,7 +50,7 @@ List<Strike> alphaBeta(
     tk_1 = tk + alpha * rk;
     dk_1 += beta * rk;
 
-    ests.add(Strike(strikes[n + 1].bell, tk_1.round()));
+    ests.add(Strike(strikes[n + 1].bell, tk_1));
   }
 
   return ests;

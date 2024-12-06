@@ -18,8 +18,8 @@ class StrikeData with ChangeNotifier {
   int touchNum = 0;
   List<Strike> strikeData = [];
 
-  List<List<int>> lines = [];
-  List<List<int>> ests = [];
+  List<List<double>> lines = [];
+  List<List<double>> ests = [];
 
   void getFirst() async {
     final numTouches = await getNumTouches();
@@ -77,7 +77,8 @@ class StrikeData with ChangeNotifier {
 
     if (response.statusCode == 200) {
       return [
-        for (var x in jsonDecode(response.body) as List) Strike(x[0], x[1])
+        for (var x in jsonDecode(response.body) as List)
+          Strike(x[0], x[1].toDouble() / 1000)
       ];
     } else {
       return [];
@@ -102,8 +103,8 @@ class StrikeData with ChangeNotifier {
 
     final refs = [for (final r in estRows) r[0].time];
 
-    List<List<int>> lines = [];
-    List<List<int>> ests = [];
+    List<List<double>> lines = [];
+    List<List<double>> ests = [];
     for (var n = 0; n < bells.length; n++) {
       var times = [for (final x in sortedRows) x[n].time];
       var line = [

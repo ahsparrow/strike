@@ -14,7 +14,7 @@ class LineWidget extends StatelessWidget {
     );
   }
 
-  Widget chart(List<List<int>> strikeData) {
+  Widget chart(List<List<double>> strikeData) {
     return LineChart(
       LineChartData(
         lineBarsData: [
