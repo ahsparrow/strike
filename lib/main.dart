@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'data.dart';
+import 'screens/settings.dart';
 import 'widgets/line.dart';
 import 'widgets/score.dart';
 import 'widgets/rms.dart';
@@ -48,25 +49,44 @@ class MyHomePage extends StatelessWidget {
       length: 4,
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-          title: Text(title),
-          bottom: const TabBar(
-            tabs: [
-              Tab(
-                icon: Icon(Icons.percent),
-              ),
-              Tab(
-                icon: Icon(Icons.show_chart),
-              ),
-              Tab(
-                icon: Icon(Icons.bar_chart),
-              ),
-              Tab(
-                icon: Icon(Icons.donut_large),
-              ),
-            ],
-          ),
-        ),
+            backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+            title: Text(title),
+            bottom: const TabBar(
+              tabs: [
+                Tab(
+                  icon: Icon(Icons.percent),
+                ),
+                Tab(
+                  icon: Icon(Icons.show_chart),
+                ),
+                Tab(
+                  icon: Icon(Icons.bar_chart),
+                ),
+                Tab(
+                  icon: Icon(Icons.donut_large),
+                ),
+              ],
+            ),
+            actions: [
+              PopupMenuButton(itemBuilder: (context) {
+                return [
+                  PopupMenuItem<int>(
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const Settings(),
+                        ),
+                      );
+                    },
+                    child: const Text('Preferences'),
+                  ),
+                  const PopupMenuItem<int>(
+                    child: Text('About'),
+                  ),
+                ];
+              })
+            ]),
         body: const TabBarView(children: [
           ScoreWidget(),
           LineWidget(),

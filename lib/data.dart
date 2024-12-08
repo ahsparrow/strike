@@ -9,7 +9,7 @@ import 'package:http/http.dart' as http;
 import 'utils/stats.dart';
 
 class StrikeData with ChangeNotifier {
-  var host = 'localhost';
+  var host = '192.168.1.102';
   var port = 5000;
 
   var alpha = 0.4;
