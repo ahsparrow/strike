@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'data.dart';
+import 'models/model.dart';
 import 'screens/settings.dart';
 import 'widgets/line.dart';
 import 'widgets/score.dart';
@@ -11,7 +11,7 @@ import 'widgets/accuracy.dart';
 void main() {
   runApp(
     ChangeNotifierProvider(
-      create: (context) => StrikeData(),
+      create: (context) => StrikeModel(),
       child: const MyApp(),
     ),
   );
@@ -100,32 +100,32 @@ class MyHomePage extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.first_page),
                 onPressed: () async {
-                  var strikeData = context.read<StrikeData>();
-                  strikeData.getFirst();
+                  var strikeModel = context.read<StrikeModel>();
+                  strikeModel.getFirst();
                 },
               ),
               const SizedBox(width: 24),
               IconButton(
                 icon: const Icon(Icons.chevron_left),
                 onPressed: () async {
-                  var strikeData = context.read<StrikeData>();
-                  strikeData.getPrev();
+                  var strikeModel = context.read<StrikeModel>();
+                  strikeModel.getPrev();
                 },
               ),
               const SizedBox(width: 24),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
                 onPressed: () async {
-                  var strikeData = context.read<StrikeData>();
-                  strikeData.getNext();
+                  var strikeModel = context.read<StrikeModel>();
+                  strikeModel.getNext();
                 },
               ),
               const SizedBox(width: 24),
               IconButton(
                 icon: const Icon(Icons.last_page),
                 onPressed: () async {
-                  var strikeData = context.read<StrikeData>();
-                  strikeData.getLast();
+                  var strikeModel = context.read<StrikeModel>();
+                  strikeModel.getLast();
                 },
               ),
               const Spacer(flex: 1),

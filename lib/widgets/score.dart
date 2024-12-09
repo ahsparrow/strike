@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../data.dart';
+import 'package:strike_flutter/models/model.dart';
 
 class ScoreWidget extends StatelessWidget {
   const ScoreWidget({super.key});
@@ -9,7 +9,7 @@ class ScoreWidget extends StatelessWidget {
   @override
   Widget build(context) {
     return Center(
-      child: Consumer<StrikeData>(
+      child: Consumer<StrikeModel>(
         builder: (context, strikeData, child) => Text(
           '${strikeData.touchNum}',
         ),

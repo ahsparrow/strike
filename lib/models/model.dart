@@ -5,19 +5,33 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'utils/stats.dart';
+import 'package:strike_flutter/utils/stats.dart';
 
-class StrikeData with ChangeNotifier {
+class StrikeModel with ChangeNotifier {
+  // CANBell server connection
   var host = '192.168.1.102';
   var port = 5000;
 
+  // Alpha/beta filter parameters
   var alpha = 0.4;
   var beta = 0.1;
 
+  // Striking error threshold
+  int thresholdMs = 50;
+
+  // Show estimates on line plot
+  bool showEstimates = false;
+
+  // Include rounds at start and end of touch
+  bool includeRounds = true;
+
+  // Strike data
   int touchNum = 0;
   List<Strike> strikeData = [];
 
+  // Calculation results
   List<List<double>> lines = [];
   List<List<double>> ests = [];
 
@@ -55,9 +69,8 @@ class StrikeData with ChangeNotifier {
     strikeData = await getTouchData(num);
     if (strikeData.isNotEmpty) {
       touchNum = num;
-      calculate();
 
-      notifyListeners();
+      calculate();
     }
   }
 
@@ -87,6 +100,10 @@ class StrikeData with ChangeNotifier {
 
   // Calculate resutls
   calculate() {
+    if (strikeData.isEmpty) {
+      return;
+    }
+
     final bells = getBells(strikeData);
     final strikes = getWholeRows(bells, strikeData);
     final estStrikes = alphaBeta(bells.length, strikes, alpha, beta);
@@ -121,5 +138,56 @@ class StrikeData with ChangeNotifier {
 
     this.lines = lines;
     this.ests = ests;
+
+    notifyListeners();
+  }
+
+  // Save settings to shared preferences
+  void savePreferences() async {
+    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+
+    await prefs.setString('host', host);
+    await prefs.setInt('port', port);
+    await prefs.setInt('threshold', thresholdMs);
+    await prefs.setDouble('alpha', alpha);
+    await prefs.setDouble('beta', beta);
+    await prefs.setBool('estimates', showEstimates);
+    await prefs.setBool('rounds', includeRounds);
+  }
+
+  // Load settings from shared preferences
+  void loadPreferences() async {
+    final SharedPreferencesAsync prefs = SharedPreferencesAsync();
+
+    host = await prefs.getString('host') ?? '192.168.4.1';
+    port = await prefs.getInt('port') ?? 80;
+
+    thresholdMs = await prefs.getInt('thresholdMs') ?? 50;
+
+    alpha = await prefs.getDouble('alpha') ?? 0.4;
+    beta = await prefs.getDouble('beta') ?? 0.1;
+
+    showEstimates = await prefs.getBool('showEstimates') ?? false;
+
+    includeRounds = await prefs.getBool('includeRounds') ?? true;
+  }
+
+  void setPreferences(
+      {required String host,
+      required int port,
+      required int thresholdMs,
+      required double alpha,
+      required double beta,
+      required bool showEstimates,
+      required bool includeRounds}) {
+    this.host = host;
+    this.port = port;
+    this.thresholdMs = thresholdMs;
+    this.alpha = alpha;
+    this.beta = beta;
+    this.showEstimates = showEstimates;
+    this.includeRounds = includeRounds;
+
+    calculate();
   }
 }

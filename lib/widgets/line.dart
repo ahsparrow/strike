@@ -2,14 +2,14 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../data.dart';
+import 'package:strike_flutter/models/model.dart';
 
 class LineWidget extends StatelessWidget {
   const LineWidget({super.key});
 
   @override
   Widget build(context) {
-    return Consumer<StrikeData>(
+    return Consumer<StrikeModel>(
       builder: (context, strikeData, child) => chart(strikeData.lines),
     );
   }
