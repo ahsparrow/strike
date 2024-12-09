@@ -167,9 +167,9 @@ class StrikeModel with ChangeNotifier {
     alpha = await prefs.getDouble('alpha') ?? 0.4;
     beta = await prefs.getDouble('beta') ?? 0.1;
 
-    showEstimates = await prefs.getBool('showEstimates') ?? false;
+    showEstimates = await prefs.getBool('estimates') ?? false;
 
-    includeRounds = await prefs.getBool('includeRounds') ?? true;
+    includeRounds = await prefs.getBool('rounds') ?? true;
   }
 
   void setPreferences(
