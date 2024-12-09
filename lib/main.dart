@@ -22,6 +22,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var settings = context.read<StrikeModel>();
+    settings.loadPreferences();
+
     return MaterialApp(
       title: 'Strike',
       theme: ThemeData(
