@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:collection/collection.dart';
 
 class Strike {
@@ -67,4 +68,20 @@ double score(
   var goodRows = rows.where((row) => row.max < threshold).length;
 
   return goodRows / rows.length * 100;
+}
+
+List<double> rms(int nbells, List<Strike> strikes, List<Strike> ests) {
+  var rowStrikes = strikes.slices(nbells);
+  var rowEsts = ests.slices(nbells);
+
+  List<double> out = [];
+  for (var i = 0; i < nbells; i++) {
+    var x = [
+      for (var p in IterableZip([rowStrikes, rowEsts]))
+        pow(p[0][i].time - p[1][i].time, 2)
+    ];
+    out.add(sqrt(x.average));
+  }
+
+  return out;
 }

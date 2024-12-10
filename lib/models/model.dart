@@ -32,9 +32,10 @@ class StrikeModel with ChangeNotifier {
   List<stats.Strike> strikeData = [];
 
   // Calculation results
-  double? score;
   List<List<double>> lines = [];
   List<List<double>> ests = [];
+  double? score;
+  List<double> rms = [];
 
   void getFirst() async {
     final numTouches = await getNumTouches();
@@ -102,9 +103,10 @@ class StrikeModel with ChangeNotifier {
   // Calculate resutls
   void calculate() {
     if (strikeData.isEmpty) {
-      score = null;
       this.lines = [];
       this.ests = [];
+      score = null;
+      rms = [];
 
       return;
     }
@@ -151,6 +153,8 @@ class StrikeModel with ChangeNotifier {
     this.ests = ests;
 
     score = stats.score(bells.length, strikes, estStrikes, thresholdMs / 1000);
+
+    rms = stats.rms(bells.length, strikes, estStrikes);
 
     notifyListeners();
   }
