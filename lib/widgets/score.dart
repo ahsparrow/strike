@@ -8,11 +8,17 @@ class ScoreWidget extends StatelessWidget {
 
   @override
   Widget build(context) {
-    return Center(
-      child: Consumer<StrikeModel>(
-        builder: (context, strikeData, child) => Text(
-          '${strikeData.touchNum}',
-        ),
+    return Consumer<StrikeModel>(
+      builder: (context, strikeData, child) => chart(strikeData.score ?? 0),
+    );
+  }
+
+  Widget chart(double score) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: FittedBox(
+        fit: BoxFit.contain,
+        child: Text('${score.round()}%'),
       ),
     );
   }

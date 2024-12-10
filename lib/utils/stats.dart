@@ -55,3 +55,16 @@ List<Strike> alphaBeta(
 
   return ests;
 }
+
+// Overall percentage score for a touch
+double score(
+    int nbells, List<Strike> strikes, List<Strike> ests, double threshold) {
+  var errs = [
+    for (var p in IterableZip([strikes, ests])) p[0].time - p[1].time
+  ];
+
+  var rows = errs.slices(nbells);
+  var goodRows = rows.where((row) => row.max < threshold).length;
+
+  return goodRows / rows.length * 100;
+}
