@@ -1,0 +1,35 @@
+name: Build packages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Java
+      uses: actions/setup-java@4.5.0
+      with:
+        distribution: oracle
+        java-version: 17
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@2.18.0
+      with:
+        channel: stable
+        version: 3.24.5
+
+    - run: flutter pub get
+    - run: flutter build windows
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: my-artifact
+        path: dist/*
