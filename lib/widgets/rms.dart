@@ -9,8 +9,6 @@ class RmsWidget extends StatelessWidget {
 
   @override
   Widget build(context) {
-    debugPrint('Hello');
-    debugPrint(MediaQuery.sizeOf(context).toString());
     var width = MediaQuery.sizeOf(context).width;
 
     return Column(
