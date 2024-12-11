@@ -9,15 +9,34 @@ class RmsWidget extends StatelessWidget {
 
   @override
   Widget build(context) {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Consumer<StrikeModel>(
-        builder: (context, strikeData, child) => chart(strikeData.rms),
-      ),
+    debugPrint('Hello');
+    debugPrint(MediaQuery.sizeOf(context).toString());
+    var width = MediaQuery.sizeOf(context).width;
+
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        const Text(
+          'RMS Accuracy',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Consumer<StrikeModel>(
+              builder: (context, strikeData, child) =>
+                  chart(width, strikeData.rms),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget chart(List<double> rmsData) {
+  Widget chart(double width, List<double> rmsData) {
     var barGroups = [
       for (final (n, d) in rmsData.indexed)
         BarChartGroupData(
@@ -25,7 +44,7 @@ class RmsWidget extends StatelessWidget {
           barRods: [
             BarChartRodData(
               toY: d * 1000,
-              width: 64,
+              width: width / 2 / rmsData.length,
               borderRadius: const BorderRadius.all(Radius.circular(0)),
             ),
           ],
@@ -44,11 +63,15 @@ class RmsWidget extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               interval: 10,
-              reservedSize: 60,
+              reservedSize: 40,
             ),
+            axisNameSize: 20,
+            axisNameWidget: Text('Accuracy (ms)'),
           ),
           rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
         ),
       ),
     );
