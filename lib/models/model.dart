@@ -11,8 +11,8 @@ import 'package:strike_flutter/utils/stats.dart' as stats;
 
 class StrikeModel with ChangeNotifier {
   // CANBell server connection
-  var host = '192.168.1.102';
-  var port = 5000;
+  var host = '192.168.4.1';
+  var port = 80;
 
   // Alpha/beta filter parameters
   var alpha = 0.4;
@@ -30,6 +30,7 @@ class StrikeModel with ChangeNotifier {
   // Strike data
   int touchNum = 0;
   List<stats.Strike> strikeData = [];
+  List<List<stats.Strike>> localStrikeData = [];
 
   // Calculation results
   List<List<double>> lines = [];
@@ -78,26 +79,62 @@ class StrikeModel with ChangeNotifier {
 
   // Query number of touches stored on the server
   Future<int> getNumTouches() async {
-    final uri = Uri(scheme: 'http', host: host, port: port, path: '/log/');
-    final response = await http.get(uri);
+    if (localStrikeData.isNotEmpty) {
+      return localStrikeData.length;
+    } else {
+      final uri = Uri(scheme: 'http', host: host, port: port, path: '/log/');
+      final response = await http.get(uri);
 
-    return jsonDecode(response.body) as int;
+      return jsonDecode(response.body) as int;
+    }
   }
 
   // Get touch data from the server
   Future<List<stats.Strike>> getTouchData(int touchNum) async {
-    final uri =
-        Uri(scheme: 'http', host: host, port: port, path: 'log/$touchNum');
-    final response = await http.get(uri);
-
-    if (response.statusCode == 200) {
-      return [
-        for (var x in jsonDecode(response.body) as List)
-          stats.Strike(x[0], x[1].toDouble() / 1000)
-      ];
+    if (localStrikeData.isNotEmpty) {
+      return localStrikeData[touchNum - 1];
     } else {
-      return [];
+      final uri =
+          Uri(scheme: 'http', host: host, port: port, path: 'log/$touchNum');
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        return [
+          for (var x in jsonDecode(response.body) as List)
+            stats.Strike(x[0], x[1].toDouble() / 1000)
+        ];
+      } else {
+        return [];
+      }
     }
+  }
+
+  // Parse and store local touch data
+  List<String> setLocalData(List<String> fileNames, List<String> data) {
+    List<List<stats.Strike>> strikeData = [];
+    List<String> badNames = [];
+
+    for (var [name, touch] in IterableZip([fileNames, data])) {
+      try {
+        var strikes = [
+          for (var [bell, time] in jsonDecode(touch))
+            stats.Strike(bell, time.toDouble() / 1000)
+        ];
+        strikeData.add(strikes);
+      } on FormatException {
+        debugPrint('Invalid JSON format');
+        badNames.add(name);
+      } on TypeError {
+        debugPrint("Can't decode strike data");
+        badNames.add(name);
+      }
+    }
+    localStrikeData = strikeData;
+
+    // Update results
+    getTouch(0);
+
+    return badNames;
   }
 
   // Calculate resutls
@@ -138,13 +175,13 @@ class StrikeModel with ChangeNotifier {
     for (var n = 0; n < bells.length; n++) {
       var times = [for (final x in sortedRows) x[n].time];
       var line = [
-        for (final pair in IterableZip([times, refs])) pair[0] - pair[1]
+        for (final [time, ref] in IterableZip([times, refs])) time - ref
       ];
       lines.add(line);
 
       times = [for (final x in sortedEstRows) x[n].time];
       var est = [
-        for (final pair in IterableZip([times, refs])) pair[0] - pair[1]
+        for (final [time, ref] in IterableZip([times, refs])) time - ref
       ];
       ests.add(est);
     }

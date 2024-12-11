@@ -1,3 +1,4 @@
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -54,6 +55,8 @@ class MyHomePage extends StatelessWidget {
         appBar: AppBar(
             backgroundColor: Theme.of(context).colorScheme.inversePrimary,
             title: Text(title),
+
+            // Tabs navigator
             bottom: const TabBar(
               tabs: [
                 Tab(
@@ -70,7 +73,10 @@ class MyHomePage extends StatelessWidget {
                 ),
               ],
             ),
+
+            // Menu actions
             actions: [
+              // Settings menu item
               PopupMenuButton(itemBuilder: (context) {
                 return [
                   PopupMenuItem<int>(
@@ -84,18 +90,32 @@ class MyHomePage extends StatelessWidget {
                     },
                     child: const Text('Preferences'),
                   ),
+
+                  // Local file menu item
+                  PopupMenuItem<int>(
+                    onTap: () async {
+                      localFiles(context);
+                    },
+                    child: const Text('Local'),
+                  ),
+
+                  // About menu item
                   const PopupMenuItem<int>(
                     child: Text('About'),
                   ),
                 ];
               })
             ]),
+
+        // Data charts
         body: const TabBarView(children: [
           ScoreWidget(),
           LineWidget(),
           RmsWidget(),
           AccuracyWidget(),
         ]),
+
+        // Navigation controls
         bottomNavigationBar: BottomAppBar(
           child: Row(
             children: [
@@ -137,5 +157,41 @@ class MyHomePage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Get list of local files to analyse
+  void localFiles(BuildContext context) async {
+    const typeGroup = XTypeGroup(extensions: ['json']);
+    var files = await openFiles(acceptedTypeGroups: [typeGroup]);
+    if (files.isEmpty) return;
+
+    var fileNames = [for (var file in files) file.name];
+    var data = [for (var file in files) await file.readAsString()];
+
+    if (context.mounted) {
+      var strikeModel = context.read<StrikeModel>();
+      var errorNames = strikeModel.setLocalData(fileNames, data);
+
+      if (errorNames.isNotEmpty) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Load touch data'),
+              content: Text('Error loading data from ${errorNames.join(", ")}'),
+              actions: [
+                TextButton(
+                  child: const Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                )
+              ],
+            );
+          },
+        );
+      }
+    }
   }
 }
