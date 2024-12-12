@@ -99,6 +99,15 @@ class MyHomePage extends StatelessWidget {
                     child: const Text('Local'),
                   ),
 
+                  // Remote connect menu item
+                  PopupMenuItem<int>(
+                    onTap: () async {
+                      var strikeModel = context.read<StrikeModel>();
+                      await strikeModel.remote();
+                    },
+                    child: const Text('Remote'),
+                  ),
+
                   // About menu item
                   const PopupMenuItem<int>(
                     child: Text('About'),
@@ -124,7 +133,7 @@ class MyHomePage extends StatelessWidget {
                 icon: const Icon(Icons.first_page),
                 onPressed: () async {
                   var strikeModel = context.read<StrikeModel>();
-                  strikeModel.getFirst();
+                  await strikeModel.getFirst();
                 },
               ),
               const SizedBox(width: 24),
@@ -132,7 +141,7 @@ class MyHomePage extends StatelessWidget {
                 icon: const Icon(Icons.chevron_left),
                 onPressed: () async {
                   var strikeModel = context.read<StrikeModel>();
-                  strikeModel.getPrev();
+                  await strikeModel.getPrev();
                 },
               ),
               const SizedBox(width: 24),
@@ -140,7 +149,7 @@ class MyHomePage extends StatelessWidget {
                 icon: const Icon(Icons.chevron_right),
                 onPressed: () async {
                   var strikeModel = context.read<StrikeModel>();
-                  strikeModel.getNext();
+                  await strikeModel.getNext();
                 },
               ),
               const SizedBox(width: 24),
@@ -148,7 +157,7 @@ class MyHomePage extends StatelessWidget {
                 icon: const Icon(Icons.last_page),
                 onPressed: () async {
                   var strikeModel = context.read<StrikeModel>();
-                  strikeModel.getLast();
+                  await strikeModel.getLast();
                 },
               ),
               const Spacer(flex: 1),

@@ -38,37 +38,37 @@ class StrikeModel with ChangeNotifier {
   double? score;
   List<double> rms = [];
 
-  void getFirst() async {
+  Future<void> getFirst() async {
     final numTouches = await getNumTouches();
     if (numTouches > 0) {
-      getTouch(1);
+      await getTouch(1);
     }
   }
 
-  void getLast() async {
+  Future<void> getLast() async {
     final numTouches = await getNumTouches();
     if (numTouches > 0) {
-      getTouch(numTouches);
+      await getTouch(numTouches);
     }
   }
 
-  void getNext() async {
+  Future<void> getNext() async {
     final numTouches = await getNumTouches();
     if (numTouches > 0) {
       final n = min(numTouches, touchNum + 1);
-      getTouch(n);
+      await getTouch(n);
     }
   }
 
-  void getPrev() async {
+  Future<void> getPrev() async {
     final numTouches = await getNumTouches();
     if (numTouches > 0) {
       final n = max(1, touchNum - 1);
-      getTouch(n);
+      await getTouch(n);
     }
   }
 
-  void getTouch(int num) async {
+  Future<void> getTouch(int num) async {
     strikeData = await getTouchData(num);
     if (strikeData.isNotEmpty) {
       touchNum = num;
@@ -107,6 +107,14 @@ class StrikeModel with ChangeNotifier {
         return [];
       }
     }
+  }
+
+  // Switch to remote mode
+  Future<void> remote() async {
+    localStrikeData = [];
+    strikeData = [];
+
+    await getLast();
   }
 
   // Parse and store local touch data
