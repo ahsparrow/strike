@@ -16,7 +16,7 @@ class FaultsWidget extends StatelessWidget {
         children: [
           const SizedBox(height: 16),
           Text(
-            'Early/Late (${strikeData.thresholdMs}ms threshold)  [Touch ${strikeData.touchNum}]',
+            'Early/Late, ${strikeData.thresholdMs}ms threshold  (Touch ${strikeData.touchNum})',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
