@@ -11,26 +11,25 @@ class AccuracyWidget extends StatelessWidget {
   Widget build(context) {
     var width = MediaQuery.sizeOf(context).width;
 
-    return Column(
-      children: [
-        const SizedBox(height: 16),
-        const Text(
-          'Early/Late',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Consumer<StrikeModel>(
-              builder: (context, strikeData, child) =>
-                  chart(width, strikeData.faults),
+    return Consumer<StrikeModel>(
+      builder: (context, strikeData, child) => Column(
+        children: [
+          const SizedBox(height: 16),
+          Text(
+            'Early/Late (${strikeData.thresholdMs}ms threshold)  [Touch ${strikeData.touchNum}]',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ),
-      ],
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: chart(width, strikeData.faults),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -98,7 +97,7 @@ class AccuracyWidget extends StatelessWidget {
               reservedSize: 40,
             ),
             axisNameSize: 20,
-            axisNameWidget: Text('Accuracy (ms)'),
+            axisNameWidget: Text('Percentage blows early/late'),
           ),
           rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
           topTitles: AxisTitles(
