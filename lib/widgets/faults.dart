@@ -49,7 +49,7 @@ class FaultsWidget extends StatelessWidget {
                 BarChartRodStackItem(
                   0,
                   fault['hand']!['late']! * 100,
-                  Colors.purple,
+                  Colors.teal,
                 ),
                 BarChartRodStackItem(
                   -fault['hand']!['early']! * 100,
@@ -68,12 +68,12 @@ class FaultsWidget extends StatelessWidget {
                 BarChartRodStackItem(
                   0,
                   fault['back']!['late']! * 100,
-                  Colors.cyan,
+                  Colors.indigo,
                 ),
                 BarChartRodStackItem(
                   -fault['back']!['early']! * 100,
                   0,
-                  Colors.green,
+                  Colors.amber,
                 )
               ],
             ),
