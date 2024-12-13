@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 
 import 'package:strike_flutter/models/model.dart';
 
-class AccuracyWidget extends StatelessWidget {
-  const AccuracyWidget({super.key});
+class FaultsWidget extends StatelessWidget {
+  const FaultsWidget({super.key});
 
   @override
   Widget build(context) {

@@ -7,7 +7,7 @@ import 'screens/settings.dart';
 import 'widgets/line.dart';
 import 'widgets/score.dart';
 import 'widgets/rms.dart';
-import 'widgets/accuracy.dart';
+import 'widgets/faults.dart';
 
 void main() {
   runApp(
@@ -121,7 +121,7 @@ class MyHomePage extends StatelessWidget {
           ScoreWidget(),
           LineWidget(),
           RmsWidget(),
-          AccuracyWidget(),
+          FaultsWidget(),
         ]),
 
         // Navigation controls
