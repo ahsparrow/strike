@@ -70,17 +70,45 @@ double score(
   return goodRows / rows.length * 100;
 }
 
-List<double> rms(int nbells, List<Strike> strikes, List<Strike> ests) {
-  var rowStrikes = strikes.slices(nbells);
-  var rowEsts = ests.slices(nbells);
-
+List<double> rms(
+    int nbells, List<List<Strike>> sortedRows, List<List<Strike>> sortedEsts) {
   List<double> out = [];
-  for (var i = 0; i < nbells; i++) {
-    var x = [
-      for (var p in IterableZip([rowStrikes, rowEsts]))
-        pow(p[0][i].time - p[1][i].time, 2)
+  for (var bell = 0; bell < nbells; bell++) {
+    var errs = [
+      for (var [row, est] in IterableZip([sortedRows, sortedEsts]))
+        row[bell].time - est[bell].time
     ];
-    out.add(sqrt(x.average));
+    out.add(sqrt([for (var e in errs) e * e].average));
+  }
+
+  return out;
+}
+
+List<Map<String, Map<String, double>>> faults(
+    int nbells,
+    List<List<Strike>> sortedRows,
+    List<List<Strike>> sortedEsts,
+    double threshold) {
+  List<Map<String, Map<String, double>>> out = [];
+
+  for (var bell = 0; bell < nbells; bell++) {
+    var errs = [
+      for (var [row, est] in IterableZip([sortedRows, sortedEsts]))
+        row[bell].time - est[bell].time
+    ];
+
+    var hand = [for (var i = 0; i < errs.length; i += 2) errs[i]];
+    var back = [for (var i = 1; i < errs.length; i += 2) errs[i]];
+
+    var handEarly = hand.where((x) => x < -threshold).length / hand.length;
+    var handLate = hand.where((x) => x > threshold).length / hand.length;
+    var backEarly = back.where((x) => x < -threshold).length / back.length;
+    var backLate = back.where((x) => x > threshold).length / back.length;
+
+    out.add({
+      'hand': {'early': handEarly, 'late': handLate},
+      'back': {'early': backEarly, 'late': backLate},
+    });
   }
 
   return out;

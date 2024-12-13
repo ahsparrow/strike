@@ -37,6 +37,7 @@ class StrikeModel with ChangeNotifier {
   List<List<double>> ests = [];
   double? score;
   List<double> rms = [];
+  List<Map<String, Map<String, double>>> faults = [];
 
   Future<void> getFirst() async {
     final numTouches = await getNumTouches();
@@ -199,7 +200,10 @@ class StrikeModel with ChangeNotifier {
 
     score = stats.score(bells.length, strikes, estStrikes, thresholdMs / 1000);
 
-    rms = stats.rms(bells.length, strikes, estStrikes);
+    rms = stats.rms(bells.length, sortedRows, sortedEstRows);
+
+    faults = stats.faults(
+        bells.length, sortedRows, sortedEstRows, thresholdMs / 1000);
 
     notifyListeners();
   }
