@@ -9,7 +9,24 @@ class ScoreWidget extends StatelessWidget {
   @override
   Widget build(context) {
     return Consumer<StrikeModel>(
-      builder: (context, strikeData, child) => chart(strikeData.score ?? 0),
+      builder: (context, strikeData, child) => Column(
+        children: [
+          const SizedBox(height: 16),
+          Text(
+            '(Touch ${strikeData.touchNum})',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: chart(strikeData.score ?? 0),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
