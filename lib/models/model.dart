@@ -160,11 +160,12 @@ class StrikeModel with ChangeNotifier {
     // Striking data
     final bells = stats.getBells(strikeData);
     final nbells = bells.length;
+
     var strikes = stats.getWholeRows(bells, strikeData);
     var rows = strikes.slices(bells.length).toList();
 
+    // Remove rounds from start and end
     if (!includeRounds) {
-      // Remove rounds from start and end
       final startStop = stats.methodStartStop(rows);
       if (startStop != null) {
         final (first, last) = startStop;
@@ -205,14 +206,12 @@ class StrikeModel with ChangeNotifier {
       ];
       ests.add(est);
     }
-
     this.lines = lines;
     this.ests = ests;
 
+    // Calculate results
     score = stats.score(nbells, strikes, estStrikes, thresholdMs / 1000);
-
     rms = stats.rms(nbells, sortedRows, sortedEstRows);
-
     faults =
         stats.faults(nbells, sortedRows, sortedEstRows, thresholdMs / 1000);
 
