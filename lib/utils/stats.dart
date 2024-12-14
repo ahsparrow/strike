@@ -31,6 +31,47 @@ List<Strike> getWholeRows(List<int> bells, List<Strike> strikes) {
   return strikes.sublist(0, lastRow * bells.length);
 }
 
+// Find start and stop of method
+(int, int)? methodStartStop(List<List<Strike>> rows) {
+  var first = 0;
+  var last = rows.length - 1;
+  final rounds = [for (var i = 0; i < rows[0].length; i++) i + 1];
+
+  // Search from start
+  for (var (n, row) in rows.indexed) {
+    var bells = row.map((x) => x.bell);
+    if (!const IterableEquality().equals(bells, rounds)) {
+      first = n;
+      break;
+    }
+  }
+
+  // Search from end
+  for (var (n, row) in rows.reversed.indexed) {
+    if (!const IterableEquality().equals(row, rounds)) {
+      last = rows.length - n - 1;
+      break;
+    }
+  }
+
+  // Nothing but rounds
+  if (last == 0) {
+    return null;
+  }
+
+  // Add one or two rows of rounds before start
+  if (first != 0) {
+    first = ((first - 1) ~/ 2) * 2;
+  }
+
+  // Add a row of rounds after finish
+  if (last != rows.length - 1) {
+    last += 1;
+  }
+
+  return (first, last);
+}
+
 // Alpha Beta filter (see https://en.wikipedia.org/wiki/Alpha_beta_filter)
 List<Strike> alphaBeta(
     int nbells, List<Strike> strikes, double alpha, double beta) {

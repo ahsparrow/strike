@@ -159,18 +159,29 @@ class StrikeModel with ChangeNotifier {
 
     // Striking data
     final bells = stats.getBells(strikeData);
-    final strikes = stats.getWholeRows(bells, strikeData);
+    final nbells = bells.length;
+    var strikes = stats.getWholeRows(bells, strikeData);
+    var rows = strikes.slices(bells.length).toList();
+
+    if (!includeRounds) {
+      // Remove rounds from start and end
+      final startStop = stats.methodStartStop(rows);
+      if (startStop != null) {
+        final (first, last) = startStop;
+        rows = rows.sublist(first, last);
+        strikes = strikes.sublist(first * nbells, last * nbells);
+      }
+    }
 
     // Calculate estimates
-    final estStrikes = stats.alphaBeta(bells.length, strikes, alpha, beta);
+    final estStrikes = stats.alphaBeta(nbells, strikes, alpha, beta);
 
     // Split data into rows
-    final rows = strikes.slices(bells.length);
     final sortedRows = [
       for (final r in rows) r.sorted((a, b) => a.bell.compareTo(b.bell))
     ];
 
-    final estRows = estStrikes.slices(bells.length);
+    final estRows = estStrikes.slices(nbells);
     final sortedEstRows = [
       for (final r in estRows) r.sorted((a, b) => a.bell.compareTo(b.bell))
     ];
@@ -181,7 +192,7 @@ class StrikeModel with ChangeNotifier {
     // Calculate line plot offsets
     List<List<double>> lines = [];
     List<List<double>> ests = [];
-    for (var n = 0; n < bells.length; n++) {
+    for (var n = 0; n < nbells; n++) {
       var times = [for (final x in sortedRows) x[n].time];
       var line = [
         for (final [time, ref] in IterableZip([times, refs])) time - ref
@@ -198,12 +209,12 @@ class StrikeModel with ChangeNotifier {
     this.lines = lines;
     this.ests = ests;
 
-    score = stats.score(bells.length, strikes, estStrikes, thresholdMs / 1000);
+    score = stats.score(nbells, strikes, estStrikes, thresholdMs / 1000);
 
-    rms = stats.rms(bells.length, sortedRows, sortedEstRows);
+    rms = stats.rms(nbells, sortedRows, sortedEstRows);
 
-    faults = stats.faults(
-        bells.length, sortedRows, sortedEstRows, thresholdMs / 1000);
+    faults =
+        stats.faults(nbells, sortedRows, sortedEstRows, thresholdMs / 1000);
 
     notifyListeners();
   }
