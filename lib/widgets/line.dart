@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -15,8 +16,15 @@ const lineColors = [
   Colors.cyan,
 ];
 
-class LineWidget extends StatelessWidget {
+class LineWidget extends StatefulWidget {
   const LineWidget({super.key});
+
+  @override
+  State<LineWidget> createState() => LineWidgetState();
+}
+
+class LineWidgetState extends State<LineWidget> {
+  double sliderValue = 0;
 
   @override
   Widget build(context) {
@@ -34,23 +42,42 @@ class LineWidget extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: chart(strikeData.lines),
+              child: chart(strikeData.lines, sliderValue),
             ),
+          ),
+          Slider(
+            value: sliderValue,
+            max: 1.0,
+            divisions: null,
+            onChanged: (double value) {
+              setState(() {
+                sliderValue = value;
+              });
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget chart(List<List<double>> strikeData) {
+  Widget chart(List<List<double>> strikeData, double start) {
+    // Calculate display indices
+    final len = strikeData[0].length;
+    var i1 = 0;
+    var i2 = len;
+    if (len > 24) {
+      i1 = (start * (strikeData[0].length - 24)).round();
+      i2 = i1 + 24;
+    }
+
     return LineChart(
       LineChartData(
         lineBarsData: [
           for (var (line, data) in strikeData.indexed)
             LineChartBarData(
               spots: [
-                for (final (n, x) in data.indexed)
-                  FlSpot(n.toDouble(), x.toDouble())
+                for (final (n, x) in data.slice(i1, i2).indexed)
+                  FlSpot(n.toDouble() + i1, x.toDouble())
               ],
               dotData: FlDotData(
                 show: true,
