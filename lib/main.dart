@@ -28,13 +28,8 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       title: 'Strike',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-      ),
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
       themeMode: ThemeMode.system,
       home: const MyHomePage(title: 'Strike'),
     );
@@ -69,7 +64,7 @@ class MyHomePage extends StatelessWidget {
                   icon: Icon(Icons.bar_chart),
                 ),
                 Tab(
-                  icon: Icon(Icons.donut_large),
+                  icon: Icon(Icons.analytics),
                 ),
               ],
             ),
