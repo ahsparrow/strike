@@ -42,7 +42,8 @@ class LineWidgetState extends State<LineWidget> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: chart(strikeData.lines, sliderValue),
+              child: chart(strikeData.lines,
+                  strikeData.showEstimates ? strikeData.ests : [], sliderValue),
             ),
           ),
           Slider(
@@ -60,7 +61,8 @@ class LineWidgetState extends State<LineWidget> {
     );
   }
 
-  Widget chart(List<List<double>> strikeData, double start) {
+  Widget chart(
+      List<List<double>> strikeData, List<List<double>> estData, double start) {
     // Calculate display indices
     final len = strikeData[0].length;
     var i1 = 0;
@@ -73,24 +75,43 @@ class LineWidgetState extends State<LineWidget> {
     return LineChart(
       LineChartData(
         lineBarsData: [
-          for (var (line, data) in strikeData.indexed)
-            LineChartBarData(
-              spots: [
-                for (final (n, x) in data.slice(i1, i2).indexed)
-                  FlSpot(n.toDouble() + i1, x.toDouble())
-              ],
-              dotData: FlDotData(
-                show: true,
-                getDotPainter: (spot, percent, barDatat, index) {
-                  return FlDotCirclePainter(
-                    radius: 4,
-                    color: lineColors[line],
-                  );
-                },
-              ),
-              color: lineColors[line],
-            )
-        ],
+              for (var (bell, data) in strikeData.indexed)
+                LineChartBarData(
+                  spots: [
+                    for (final (n, x) in data.slice(i1, i2).indexed)
+                      FlSpot(n.toDouble() + i1, x.toDouble())
+                  ],
+                  dotData: FlDotData(
+                    show: true,
+                    getDotPainter: (spot, percent, barDatat, index) {
+                      return FlDotCirclePainter(
+                        radius: 4,
+                        color: lineColors[bell],
+                      );
+                    },
+                  ),
+                  color: lineColors[bell],
+                )
+            ] +
+            [
+              for (var (bell, data) in estData.indexed)
+                LineChartBarData(
+                  spots: [
+                    for (final (n, x) in data.slice(i1, i2).indexed)
+                      FlSpot(n.toDouble() + i1, x.toDouble())
+                  ],
+                  dotData: FlDotData(
+                    show: true,
+                    getDotPainter: (spot, percent, barDatat, index) {
+                      return FlDotCrossPainter(
+                        color: lineColors[bell],
+                      );
+                    },
+                  ),
+                  color: lineColors[bell],
+                  barWidth: 0,
+                )
+            ],
         borderData: FlBorderData(show: false),
         gridData: const FlGridData(show: false),
         lineTouchData: const LineTouchData(enabled: false),
