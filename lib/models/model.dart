@@ -141,7 +141,9 @@ class StrikeModel with ChangeNotifier {
     localStrikeData = strikeData;
 
     // Update results
-    getTouch(0);
+    if (strikeData.isNotEmpty) {
+      getTouch(1);
+    }
 
     return badNames;
   }
