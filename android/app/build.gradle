@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "uk.org.freeflight.strike_flutter"
+    namespace = "com.example.strike_flutter"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
