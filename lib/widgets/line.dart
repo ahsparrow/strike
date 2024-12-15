@@ -73,6 +73,7 @@ class LineWidgetState extends State<LineWidget> {
     }
 
     return LineChart(
+      duration: Duration.zero,
       LineChartData(
         lineBarsData: [
               for (var (bell, data) in strikeData.indexed)
