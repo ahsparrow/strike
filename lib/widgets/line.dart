@@ -41,7 +41,7 @@ class LineWidgetState extends State<LineWidget> {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24),
               child: chart(strikeData.lines,
                   strikeData.showEstimates ? strikeData.ests : [], sliderValue),
             ),
@@ -115,9 +115,17 @@ class LineWidgetState extends State<LineWidget> {
         gridData: const FlGridData(show: false),
         lineTouchData: const LineTouchData(enabled: false),
         titlesData: const FlTitlesData(
-            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false))),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              interval: 2,
+              reservedSize: 30,
+            ),
+          ),
+          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
       ),
     );
   }
