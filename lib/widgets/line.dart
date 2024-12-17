@@ -28,6 +28,9 @@ class LineWidgetState extends State<LineWidget> {
 
   @override
   Widget build(context) {
+    var width = MediaQuery.sizeOf(context).width;
+    var nRows = width ~/ 30;
+
     return Consumer<StrikeModel>(
       builder: (context, strikeData, child) => Column(
         children: [
@@ -42,8 +45,11 @@ class LineWidgetState extends State<LineWidget> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: chart(strikeData.lines,
-                  strikeData.showEstimates ? strikeData.ests : [], sliderValue),
+              child: chart(
+                  strikeData.lines,
+                  strikeData.showEstimates ? strikeData.ests : [],
+                  sliderValue,
+                  nRows),
             ),
           ),
           Slider(
@@ -61,16 +67,16 @@ class LineWidgetState extends State<LineWidget> {
     );
   }
 
-  Widget chart(
-      List<List<double>> strikeData, List<List<double>> estData, double start) {
+  Widget chart(List<List<double>> strikeData, List<List<double>> estData,
+      double start, int nRows) {
     // Calculate display indices
     var startIdx = 0;
     var stopIdx = 0;
     if (strikeData.isNotEmpty) {
       final len = strikeData[0].length;
-      if (len > 24) {
-        startIdx = (start * (len - 24)).round();
-        stopIdx = startIdx + 24;
+      if (len > nRows) {
+        startIdx = (start * (len - nRows)).round();
+        stopIdx = startIdx + nRows;
       } else {
         stopIdx = len;
       }
