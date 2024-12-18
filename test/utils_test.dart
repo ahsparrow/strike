@@ -1,15 +1,11 @@
+import 'package:collection/collection.dart';
 import 'package:test/test.dart';
 
-import 'package:strike_flutter/utils/stats.dart';
+import 'package:strike/utils/stats.dart';
 
 void main() {
   test('Get bells', () {
-    var testData = [
-      [1, 1],
-      [2, 1],
-      [3, 1],
-      [2, 1]
-    ];
+    var testData = [Strike(1, 1), Strike(2, 1), Strike(3, 1), Strike(2, 1)];
     var bells = getBells(testData);
 
     expect(bells, [1, 2, 3]);
@@ -18,12 +14,12 @@ void main() {
   test('Whole rows', () {
     var bells = [1, 2, 3];
     var testData = [
-      [1, 0],
-      [2, 0],
-      [3, 0],
-      [2, 0],
-      [1, 0],
-      [3, 0]
+      Strike(1, 0),
+      Strike(2, 0),
+      Strike(3, 0),
+      Strike(2, 0),
+      Strike(1, 0),
+      Strike(3, 0)
     ];
 
     var strikes = getWholeRows(bells, testData);
@@ -40,21 +36,25 @@ void main() {
 
   test('Alpha Beta', () {
     var testData = [
-      [1, 0],
-      [2, 100],
-      [3, 200],
-      [1, 300],
-      [2, 400],
-      [3, 500],
-      [1, 700],
-      [2, 800],
-      [3, 900],
-      [1, 1000],
-      [2, 1100],
-      [3, 1200],
+      Strike(1, 0),
+      Strike(2, 100),
+      Strike(3, 200),
+      Strike(1, 300),
+      Strike(2, 400),
+      Strike(3, 500),
+      Strike(1, 700),
+      Strike(2, 800),
+      Strike(3, 900),
+      Strike(1, 1000),
+      Strike(2, 1100),
+      Strike(3, 1200),
     ];
 
     var ests = alphaBeta(3, testData, 0.4, 0.1);
-    expect(ests, equals(testData));
+
+    for (var [t, e] in IterableZip([testData, ests])) {
+      expect(t.bell, equals(e.bell));
+      expect((t.time - e.time), closeTo(0, 1E-6));
+    }
   });
 }
