@@ -1,4 +1,4 @@
-package uk.org.freeflight.strike_flutter
+package com.example.strike
 
 import io.flutter.embedding.android.FlutterActivity
 
