@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "strike_flutter" "\0"
+            VALUE "CompanyName", "uk.org.freeflight" "\0"
+            VALUE "FileDescription", "strike" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "strike_flutter" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2024 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "strike_flutter.exe" "\0"
-            VALUE "ProductName", "strike_flutter" "\0"
+            VALUE "InternalName", "strike" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2024 uk.org.freeflight. All rights reserved." "\0"
+            VALUE "OriginalFilename", "strike.exe" "\0"
+            VALUE "ProductName", "strike" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:strike_flutter/models/model.dart';
+import 'package:strike/models/model.dart';
 
 // Settings screen
 class Settings extends StatelessWidget {

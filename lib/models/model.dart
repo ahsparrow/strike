@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:strike_flutter/utils/stats.dart' as stats;
+import 'package:strike/utils/stats.dart' as stats;
 
 class StrikeModel with ChangeNotifier {
   // CANBell server connection
@@ -86,7 +86,7 @@ class StrikeModel with ChangeNotifier {
       final uri = Uri(scheme: 'http', host: host, port: port, path: '/log/');
       final response = await http.get(uri);
 
-      return jsonDecode(response.body) as int;
+      return LineSplitter().convert(response.body).length;
     }
   }
 
@@ -100,10 +100,8 @@ class StrikeModel with ChangeNotifier {
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
-        return [
-          for (var x in jsonDecode(response.body) as List)
-            stats.Strike(x[0], x[1].toDouble() / 1000)
-        ];
+        List<stats.Strike> strikes = parseCsv(response.body);
+        return strikes;
       } else {
         return [];
       }
@@ -124,18 +122,11 @@ class StrikeModel with ChangeNotifier {
     List<String> badNames = [];
 
     for (var [name, touch] in IterableZip([fileNames, data])) {
-      try {
-        var strikes = [
-          for (var [bell, time] in jsonDecode(touch))
-            stats.Strike(bell, time.toDouble() / 1000)
-        ];
+      List<stats.Strike> strikes = parseCsv(touch);
+      if (strikes.isEmpty) {
+        badNames.add(name);
+      } else {
         strikeData.add(strikes);
-      } on FormatException {
-        debugPrint('Invalid JSON format');
-        badNames.add(name);
-      } on TypeError {
-        debugPrint("Can't decode strike data");
-        badNames.add(name);
       }
     }
     localStrikeData = strikeData;
@@ -146,6 +137,35 @@ class StrikeModel with ChangeNotifier {
     }
 
     return badNames;
+  }
+
+  // Parse a CSV formatted String
+  List<stats.Strike> parseCsv(String data) {
+    List<stats.Strike> strikes = [];
+
+    Iterable<String> lines = LineSplitter.split(data);
+
+    // Check for correct header
+    if (lines.first != 'bell,ticks_ms') {
+      return [];
+    }
+
+    // Parse the stike times
+    for (var line in lines.skip(1)) {
+      List<String> row = line.split(',');
+      if (row.length != 2) {
+        break;
+      }
+
+      var bell = int.tryParse(row[0]);
+      var time = int.tryParse(row[1]);
+      if (bell == null || time == null) {
+        break;
+      }
+      strikes.add(stats.Strike(bell, time / 1000));
+    }
+
+    return strikes;
   }
 
   // Calculate resutls

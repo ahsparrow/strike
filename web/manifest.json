@@ -1,6 +1,6 @@
 {
-    "name": "strike_flutter",
-    "short_name": "strike_flutter",
+    "name": "strike",
+    "short_name": "strike",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

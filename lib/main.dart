@@ -165,7 +165,7 @@ class MyHomePage extends StatelessWidget {
 
   // Get list of local files to analyse
   void localFiles(BuildContext context) async {
-    const typeGroup = XTypeGroup(extensions: ['json']);
+    const typeGroup = XTypeGroup(extensions: ['csv']);
     var files = await openFiles(acceptedTypeGroups: [typeGroup]);
     if (files.isEmpty) return;
 
