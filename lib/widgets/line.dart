@@ -32,11 +32,11 @@ class LineWidgetState extends State<LineWidget> {
     var nRows = width ~/ 30;
 
     return Consumer<StrikeModel>(
-      builder: (context, strikeData, child) => Column(
+      builder: (context, strikeModel, child) => Column(
         children: [
           const SizedBox(height: 16),
           Text(
-            '(${strikeData.touchName})',
+            '(${strikeModel.touchName})',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -46,8 +46,8 @@ class LineWidgetState extends State<LineWidget> {
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: chart(
-                  strikeData.lines,
-                  strikeData.showEstimates ? strikeData.ests : [],
+                  strikeModel.lines,
+                  strikeModel.showEstimates ? strikeModel.ests : [],
                   sliderValue,
                   nRows),
             ),
@@ -67,13 +67,13 @@ class LineWidgetState extends State<LineWidget> {
     );
   }
 
-  Widget chart(List<List<double>> strikeData, List<List<double>> estData,
+  Widget chart(List<List<double>> strikeModel, List<List<double>> estData,
       double start, int nRows) {
     // Calculate display indices
     var startIdx = 0;
     var stopIdx = 0;
-    if (strikeData.isNotEmpty) {
-      final len = strikeData[0].length;
+    if (strikeModel.isNotEmpty) {
+      final len = strikeModel[0].length;
       if (len > nRows) {
         startIdx = (start * (len - nRows)).round();
         stopIdx = startIdx + nRows;
@@ -86,7 +86,7 @@ class LineWidgetState extends State<LineWidget> {
       duration: Duration.zero,
       LineChartData(
         lineBarsData: [
-              for (var (bell, data) in strikeData.indexed)
+              for (var (bell, data) in strikeModel.indexed)
                 LineChartBarData(
                   spots: spots(data, startIdx, stopIdx),
                   dotData: FlDotData(

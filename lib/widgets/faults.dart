@@ -12,11 +12,11 @@ class FaultsWidget extends StatelessWidget {
     var width = MediaQuery.sizeOf(context).width;
 
     return Consumer<StrikeModel>(
-      builder: (context, strikeData, child) => Column(
+      builder: (context, strikeModel, child) => Column(
         children: [
           const SizedBox(height: 16),
           Text(
-            'Early/Late, ${strikeData.thresholdMs}ms threshold  (${strikeData.touchName})',
+            'Early/Late, ${strikeModel.thresholdMs}ms threshold  (${strikeModel.touchName})',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -25,7 +25,7 @@ class FaultsWidget extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: chart(width, strikeData.faults),
+              child: chart(width, strikeModel.faults),
             ),
           ),
         ],

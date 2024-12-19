@@ -12,11 +12,11 @@ class RmsWidget extends StatelessWidget {
     var width = MediaQuery.sizeOf(context).width;
 
     return Consumer<StrikeModel>(
-      builder: (context, strikeData, child) => Column(
+      builder: (context, strikeModel, child) => Column(
         children: [
           const SizedBox(height: 16),
           Text(
-            'RMS Accuracy  (${strikeData.touchName})',
+            'RMS Accuracy  (${strikeModel.touchName})',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -25,7 +25,7 @@ class RmsWidget extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: chart(width, strikeData.rms),
+              child: chart(width, strikeModel.rms),
             ),
           ),
         ],
