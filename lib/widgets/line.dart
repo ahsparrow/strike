@@ -36,7 +36,7 @@ class LineWidgetState extends State<LineWidget> {
         children: [
           const SizedBox(height: 16),
           Text(
-            '(Touch ${strikeData.touchNum})',
+            '(${strikeData.touchName})',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,

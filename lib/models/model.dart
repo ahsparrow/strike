@@ -31,6 +31,7 @@ class StrikeModel with ChangeNotifier {
   int touchNum = 0;
   List<stats.Strike> strikeData = [];
   List<List<stats.Strike>> localStrikeData = [];
+  List<String> localNames = [];
 
   // Calculation results
   List<List<double>> lines = [];
@@ -90,6 +91,14 @@ class StrikeModel with ChangeNotifier {
     }
   }
 
+  String get touchName {
+    if (localStrikeData.isNotEmpty) {
+      return localNames[touchNum - 1];
+    } else {
+      return 'Touch $touchNum';
+    }
+  }
+
   // Get touch data from the server
   Future<List<stats.Strike>> getTouchData(int touchNum) async {
     if (localStrikeData.isNotEmpty) {
@@ -120,6 +129,7 @@ class StrikeModel with ChangeNotifier {
   List<String> setLocalData(List<String> fileNames, List<String> data) {
     List<List<stats.Strike>> strikeData = [];
     List<String> badNames = [];
+    localNames = [];
 
     for (var [name, touch] in IterableZip([fileNames, data])) {
       List<stats.Strike> strikes = parseCsv(touch);
@@ -127,6 +137,7 @@ class StrikeModel with ChangeNotifier {
         badNames.add(name);
       } else {
         strikeData.add(strikes);
+        localNames.add(name);
       }
     }
     localStrikeData = strikeData;

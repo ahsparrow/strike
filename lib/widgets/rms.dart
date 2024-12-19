@@ -16,7 +16,7 @@ class RmsWidget extends StatelessWidget {
         children: [
           const SizedBox(height: 16),
           Text(
-            'RMS Accuracy  (Touch ${strikeData.touchNum})',
+            'RMS Accuracy  (${strikeData.touchName})',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
