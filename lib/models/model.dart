@@ -198,8 +198,8 @@ class StrikeModel with ChangeNotifier {
       final startStop = stats.methodStartStop(rows);
       if (startStop != null) {
         final (first, last) = startStop;
-        rows = rows.sublist(first, last);
-        strikes = strikes.sublist(first * nbells, last * nbells);
+        rows = rows.sublist(first, last + 1);
+        strikes = strikes.sublist(first * nbells, (last + 1) * nbells);
       }
     }
     if (strikes.isEmpty) {

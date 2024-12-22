@@ -34,7 +34,7 @@ List<Strike> getWholeRows(List<int> bells, List<Strike> strikes) {
 // Find start and stop of method
 (int, int)? methodStartStop(List<List<Strike>> rows) {
   var first = 0;
-  var last = rows.length - 1;
+  var last = rows.length;
   final rounds = [for (var i = 0; i < rows[0].length; i++) i + 1];
 
   // Search from start
@@ -48,14 +48,15 @@ List<Strike> getWholeRows(List<int> bells, List<Strike> strikes) {
 
   // Search from end
   for (var (n, row) in rows.reversed.indexed) {
-    if (!const IterableEquality().equals(row, rounds)) {
+    var bells = row.map((x) => x.bell);
+    if (!const IterableEquality().equals(bells, rounds)) {
       last = rows.length - n - 1;
       break;
     }
   }
 
   // Nothing but rounds
-  if (last == 0) {
+  if (last == rows.length) {
     return null;
   }
 
