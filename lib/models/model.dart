@@ -181,20 +181,20 @@ class StrikeModel with ChangeNotifier {
 
   // Calculate resutls
   void calculate() {
-    if (strikeData.isEmpty) {
-      this.lines = [];
-      this.ests = [];
-      score = null;
-      rms = [];
+    this.lines = [];
+    this.ests = [];
+    score = null;
+    rms = [];
 
-      return;
-    }
+    if (strikeData.isEmpty) return;
 
     // Striking data
     final bells = stats.getBells(strikeData);
     final nbells = bells.length;
 
     var strikes = stats.getWholeRows(bells, strikeData);
+    if (strikes.isEmpty) return;
+
     var rows = strikes.slices(bells.length).toList();
 
     // Remove rounds from start and end
@@ -206,6 +206,7 @@ class StrikeModel with ChangeNotifier {
         strikes = strikes.sublist(first * nbells, last * nbells);
       }
     }
+    if (strikes.isEmpty) return;
 
     // Calculate estimates
     final estStrikes = stats.alphaBeta(nbells, strikes, alpha, beta);
