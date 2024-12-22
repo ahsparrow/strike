@@ -186,15 +186,11 @@ class StrikeModel with ChangeNotifier {
     score = null;
     rms = [];
 
-    if (strikeData.isEmpty) return;
-
     // Striking data
     final bells = stats.getBells(strikeData);
     final nbells = bells.length;
 
     var strikes = stats.getWholeRows(bells, strikeData);
-    if (strikes.isEmpty) return;
-
     var rows = strikes.slices(bells.length).toList();
 
     // Remove rounds from start and end
@@ -206,7 +202,10 @@ class StrikeModel with ChangeNotifier {
         strikes = strikes.sublist(first * nbells, last * nbells);
       }
     }
-    if (strikes.isEmpty) return;
+    if (strikes.isEmpty) {
+      notifyListeners();
+      return;
+    }
 
     // Calculate estimates
     final estStrikes = stats.alphaBeta(nbells, strikes, alpha, beta);
