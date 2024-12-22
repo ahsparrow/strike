@@ -84,7 +84,7 @@ class StrikeModel with ChangeNotifier {
     if (localStrikeData.isNotEmpty) {
       return localStrikeData.length;
     } else {
-      final uri = Uri(scheme: 'http', host: host, port: port, path: '/log/');
+      final uri = Uri(scheme: 'http', host: host, port: port, path: '/log');
       final response = await http.get(uri);
 
       return LineSplitter().convert(response.body).length;
