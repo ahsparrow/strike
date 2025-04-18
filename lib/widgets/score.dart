@@ -22,7 +22,7 @@ class ScoreWidget extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: chart(strikeModel.score ?? 0),
+              child: chart(strikeModel.score),
             ),
           ),
         ],
@@ -30,12 +30,12 @@ class ScoreWidget extends StatelessWidget {
     );
   }
 
-  Widget chart(double score) {
+  Widget chart(double? score) {
     return Padding(
       padding: const EdgeInsets.all(32),
       child: FittedBox(
         fit: BoxFit.contain,
-        child: Text('${score.round()}%'),
+        child: Text(score != null ? '${score.round()}%' : ''),
       ),
     );
   }

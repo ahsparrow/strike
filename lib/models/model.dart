@@ -1,18 +1,24 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:strike/utils/stats.dart' as stats;
 
+enum Mode { local, remote }
+
 class StrikeModel with ChangeNotifier {
+  Mode mode = Mode.remote;
+
   // CANBell server connection
   var host = '192.168.4.1';
   var port = 80;
+
+  WebSocketChannel? wsChannel;
 
   // Alpha/beta filter parameters
   var alpha = 0.4;
@@ -41,88 +47,104 @@ class StrikeModel with ChangeNotifier {
   List<Map<String, Map<String, double>>> faults = [];
 
   Future<void> getFirst() async {
-    final numTouches = await getNumTouches();
-    if (numTouches > 0) {
-      await getTouch(1);
-    }
+    await getTouch(1);
   }
 
   Future<void> getLast() async {
     final numTouches = await getNumTouches();
-    if (numTouches > 0) {
-      await getTouch(numTouches);
-    }
+    await getTouch(numTouches);
   }
 
   Future<void> getNext() async {
-    final numTouches = await getNumTouches();
-    if (numTouches > 0) {
-      final n = min(numTouches, touchNum + 1);
-      await getTouch(n);
-    }
+    await getTouch(touchNum + 1);
   }
 
   Future<void> getPrev() async {
-    final numTouches = await getNumTouches();
-    if (numTouches > 0) {
-      final n = max(1, touchNum - 1);
-      await getTouch(n);
-    }
+    await getTouch(touchNum - 1);
   }
 
   Future<void> getTouch(int num) async {
-    strikeData = await getTouchData(num);
-    if (strikeData.isNotEmpty) {
-      touchNum = num;
+    wsChannel?.sink.close();
+    wsChannel = null;
 
+    final numTouches = await getNumTouches();
+
+    if (num > 0 && num <= numTouches) {
+      strikeData = await getTouchData(num);
+      touchNum = num;
       calculate();
     }
   }
 
   // Query number of touches stored on the server
   Future<int> getNumTouches() async {
-    if (localStrikeData.isNotEmpty) {
+    if (mode == Mode.local) {
       return localStrikeData.length;
     } else {
       final uri = Uri(scheme: 'http', host: host, port: port, path: '/log');
       final response = await http.get(uri);
 
-      return LineSplitter().convert(response.body).length;
+      return LineSplitter().convert(response.body).length - 1;
     }
   }
 
   String get touchName {
-    if (localStrikeData.isNotEmpty) {
+    if (mode == Mode.local) {
       return localNames[touchNum - 1];
     } else {
       return 'Touch $touchNum';
     }
   }
 
-  // Get touch data from the server
+  // Get local/remote touch data
   Future<List<stats.Strike>> getTouchData(int touchNum) async {
-    if (localStrikeData.isNotEmpty) {
+    if (touchNum < 1) {
+      return [];
+    } else if (mode == Mode.local) {
       return localStrikeData[touchNum - 1];
     } else {
-      final uri =
-          Uri(scheme: 'http', host: host, port: port, path: 'log/$touchNum');
-      final response = await http.get(uri);
+      return await fetchTouchData(touchNum);
+    }
+  }
 
-      if (response.statusCode == 200) {
-        List<stats.Strike> strikes = parseCsv(response.body);
-        return strikes;
-      } else {
-        return [];
-      }
+  // Fetch touch data from server
+  Future<List<stats.Strike>> fetchTouchData(int touchNum) async {
+    final uri =
+        Uri(scheme: 'http', host: host, port: port, path: 'log/$touchNum');
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      List<stats.Strike> strikes = parseCsv(response.body);
+      return strikes;
+    } else {
+      return [];
     }
   }
 
   // Switch to remote mode
   Future<void> remote() async {
-    localStrikeData = [];
+    var wsUrl = Uri(scheme: 'ws', host: host, port: port, path: 'status');
+    var wsChannel = WebSocketChannel.connect(wsUrl);
+
+    await wsChannel.ready;
+    this.wsChannel = wsChannel;
+
+    mode = Mode.remote;
     strikeData = [];
 
-    await getLast();
+    await for (final data in wsChannel.stream) {
+      final msg = data as String;
+
+      if (msg.startsWith('start')) {
+        strikeData = [];
+      } else {
+        touchNum = int.parse(msg.split(',')[1]);
+        if (touchNum > 0) {
+          strikeData = await fetchTouchData(touchNum);
+        }
+      }
+      calculate();
+    }
   }
 
   // Parse and store local touch data
@@ -144,6 +166,7 @@ class StrikeModel with ChangeNotifier {
 
     // Update results
     if (strikeData.isNotEmpty) {
+      mode = Mode.local;
       getTouch(1);
     }
 
@@ -181,6 +204,17 @@ class StrikeModel with ChangeNotifier {
 
   // Calculate resutls
   void calculate() {
+    if (strikeData.isEmpty) {
+      score = null;
+      this.lines = [];
+      this.ests = [];
+      rms = [];
+      faults = [];
+
+      notifyListeners();
+      return;
+    }
+
     this.lines = [];
     this.ests = [];
     score = null;
@@ -297,6 +331,6 @@ class StrikeModel with ChangeNotifier {
     this.showEstimates = showEstimates;
     this.includeRounds = includeRounds;
 
-    calculate();
+    //calculate();
   }
 }
